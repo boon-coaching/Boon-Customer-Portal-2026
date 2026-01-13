@@ -76,17 +76,30 @@ const AdminCompanySwitcher: React.FC<{
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    // Fetch distinct account_names from session_tracking (the actual values used for filtering)
+    // Fetch all distinct account_names from session_tracking
     const fetchCompanies = async () => {
-      const { data } = await supabase
-        .from('session_tracking')
-        .select('account_name, program_title')
-        .order('account_name');
+      // Paginate to get ALL records (Supabase defaults to 1000)
+      let allData: any[] = [];
+      let from = 0;
+      const pageSize = 1000;
 
-      if (data) {
+      while (true) {
+        const { data, error } = await supabase
+          .from('session_tracking')
+          .select('account_name, program_title')
+          .order('account_name')
+          .range(from, from + pageSize - 1);
+
+        if (error || !data || data.length === 0) break;
+        allData = [...allData, ...data];
+        if (data.length < pageSize) break;
+        from += pageSize;
+      }
+
+      if (allData.length > 0) {
         // Get unique account_names with their program type
         const uniqueMap = new Map<string, 'GROW' | 'Scale'>();
-        data.forEach(row => {
+        allData.forEach(row => {
           if (row.account_name && !uniqueMap.has(row.account_name)) {
             const isScale = row.program_title?.toUpperCase().includes('SCALE') ||
                            row.account_name?.toUpperCase().includes('SCALE');
@@ -99,6 +112,7 @@ const AdminCompanySwitcher: React.FC<{
           programType
         }));
         setCompanies(companyList.sort((a, b) => a.account_name.localeCompare(b.account_name)));
+        console.log(`Loaded ${companyList.length} companies for admin switcher`);
       }
     };
     fetchCompanies();
@@ -142,9 +156,12 @@ const AdminCompanySwitcher: React.FC<{
               className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-300"
               autoFocus
             />
+            <div className="text-[10px] text-gray-400 mt-1 px-1">
+              {searchTerm ? `${filteredCompanies.length} of ${companies.length}` : `${companies.length} accounts`}
+            </div>
           </div>
-          <div className="max-h-64 overflow-y-auto">
-            {filteredCompanies.slice(0, 30).map((company) => (
+          <div className="max-h-96 overflow-y-auto">
+            {filteredCompanies.map((company) => (
               <button
                 key={company.account_name}
                 onClick={() => handleSelect(company)}
