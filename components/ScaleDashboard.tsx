@@ -146,7 +146,7 @@ const ScaleDashboard: React.FC = () => {
 
   // Get unique programs from multiple sources to ensure all programs appear
   const availablePrograms = useMemo(() => {
-    const programs = new Set<string>();
+    const programCounts = new Map<string, number>();
     const normalize = (s: string) => s?.toLowerCase().trim() || '';
     const currentAccount = normalize(
       accountName ||
@@ -161,28 +161,39 @@ const ScaleDashboard: React.FC = () => {
       return normalized.includes(currentAccount) || currentAccount.includes(normalized.split(' ')[0]);
     };
 
-    // 1. Get programs from employee_manager
+    // 1. Count employees per program from employee_manager
     employees.forEach(e => {
       const pt = (e as any).program_title || (e as any).coaching_program;
       const acct = (e as any).account_name || e.company_name || e.company;
-      if (pt && matchesCompany(acct)) programs.add(pt);
+      if (pt && matchesCompany(acct)) {
+        programCounts.set(pt, (programCounts.get(pt) || 0) + 1);
+      }
     });
 
     // 2. Also get programs from sessions (in case not synced to employee_manager yet)
     sessions.forEach(s => {
       const pt = (s as any).program_title;
       const acct = (s as any).account_name;
-      if (pt && matchesCompany(acct)) programs.add(pt);
+      if (pt && matchesCompany(acct) && !programCounts.has(pt)) {
+        programCounts.set(pt, 0); // Add with 0 count if not in employee_manager
+      }
     });
 
     // 3. Also get programs from welcome surveys
     welcomeSurveys.forEach(w => {
       const pt = w.program_title;
       const acct = w.account_name;
-      if (pt && matchesCompany(acct)) programs.add(pt);
+      if (pt && matchesCompany(acct) && !programCounts.has(pt)) {
+        programCounts.set(pt, 0); // Add with 0 count if not in employee_manager
+      }
     });
 
-    return ['All Programs', ...Array.from(programs).sort()];
+    // Sort by employee count (descending)
+    const sorted = Array.from(programCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([program]) => program);
+
+    return ['All Programs', ...sorted];
   }, [employees, sessions, welcomeSurveys, accountName, companyName]);
 
   const metrics = useMemo(() => {
