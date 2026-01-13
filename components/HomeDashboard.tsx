@@ -269,16 +269,39 @@ const HomeDashboard: React.FC = () => {
         startDateMap.set(p.program_title, new Date(p.program_start_date));
       }
     });
-    
-    // Get unique programs from sessions - normalize to display names before deduplication
-    const sessionCohorts = sessions
-      .map(s => {
-        const raw = ((s as any).program_title || s.program_name || s.cohort || s.program || '').trim();
-        return PROGRAM_DISPLAY_NAMES[raw] || raw;  // Convert CP codes to display names
-      })
-      .filter(Boolean) as string[];
-    const unique = Array.from(new Set(sessionCohorts));
-    
+
+    const allCohorts = new Set<string>();
+
+    // Add cohorts from sessions
+    sessions.forEach(s => {
+      const raw = ((s as any).program_title || s.program_name || s.cohort || s.program || '').trim();
+      const normalized = PROGRAM_DISPLAY_NAMES[raw] || raw;
+      if (normalized) allCohorts.add(normalized);
+    });
+
+    // Add cohorts from employee roster (includes cohorts without sessions yet)
+    employees.forEach(e => {
+      const raw = ((e as any).program_title || (e as any).program_name || e.cohort || e.program || '').trim();
+      const normalized = PROGRAM_DISPLAY_NAMES[raw] || raw;
+      if (normalized) allCohorts.add(normalized);
+    });
+
+    // Add cohorts from welcome surveys
+    welcomeSurveys.forEach(w => {
+      const raw = (w.program_title || '').trim();
+      const normalized = PROGRAM_DISPLAY_NAMES[raw] || raw;
+      if (normalized) allCohorts.add(normalized);
+    });
+
+    // Add cohorts from program config
+    programConfig.forEach(p => {
+      const raw = (p.program_title || '').trim();
+      const normalized = PROGRAM_DISPLAY_NAMES[raw] || raw;
+      if (normalized) allCohorts.add(normalized);
+    });
+
+    const unique = Array.from(allCohorts);
+
     // Sort by start date (most recent first), then alphabetically for those without dates
     unique.sort((a, b) => {
       const dateA = startDateMap.get(a);
@@ -288,9 +311,9 @@ const HomeDashboard: React.FC = () => {
       if (dateB) return 1;  // b has date, a doesn't -> b first
       return a.localeCompare(b); // Both no dates -> alphabetical
     });
-    
+
     return ['All Cohorts', ...unique];
-  }, [sessions, programConfig]);
+  }, [sessions, employees, welcomeSurveys, programConfig]);
 
   const handleCohortChange = (cohort: string) => {
     setSearchParams({ cohort });

@@ -144,15 +144,26 @@ const ScaleDashboard: React.FC = () => {
     setProgramDropdownOpen(false);
   };
 
-  // Get unique programs from sessions
+  // Get unique programs from sessions AND employees (to include programs without sessions yet)
   const availablePrograms = useMemo(() => {
     const programs = new Set<string>();
+    // Add programs from session_tracking
     sessions.forEach(s => {
       const pt = (s as any).program_title;
       if (pt) programs.add(pt);
     });
+    // Also add programs from employee_manager (includes programs without sessions)
+    employees.forEach(e => {
+      const pt = (e as any).program_title || (e as any).coaching_program;
+      if (pt) programs.add(pt);
+    });
+    // Also add programs from welcome_survey_scale
+    welcomeSurveys.forEach(w => {
+      const pt = w.program_title;
+      if (pt) programs.add(pt);
+    });
     return ['All Programs', ...Array.from(programs).sort()];
-  }, [sessions]);
+  }, [sessions, employees, welcomeSurveys]);
 
   const metrics = useMemo(() => {
     if (loading) return null;
