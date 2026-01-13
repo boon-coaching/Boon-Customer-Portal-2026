@@ -64,7 +64,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
           const stored = localStorage.getItem('boon_admin_company_override');
           if (stored) {
             const override = JSON.parse(stored);
-            company = override.name;
+            company = override.account_name;
             companyId = override.id || companyId;
             accName = override.account_name || accName;
           }
@@ -111,7 +111,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
         const stored = localStorage.getItem('boon_admin_company_override');
         if (stored) {
           const override = JSON.parse(stored);
-          company = override.name;
+          company = override.account_name;
           companyId = override.id || companyId;
           accName = override.account_name || accName;
         }

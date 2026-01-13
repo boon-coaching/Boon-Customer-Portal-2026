@@ -104,7 +104,7 @@ const HomeDashboard: React.FC = () => {
             if (stored) {
               const override = JSON.parse(stored);
               console.log('DEBUG OVERRIDE parsed:', override);
-              company = override.name;
+              company = override.account_name;
               compId = override.id || compId;
               accName = override.account_name || accName;
             }

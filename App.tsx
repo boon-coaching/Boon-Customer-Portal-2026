@@ -62,12 +62,17 @@ const getDisplayName = (program: string): string => {
 // --- Admin Company Switcher ---
 const ADMIN_COMPANY_KEY = 'boon_admin_company_override';
 
-const AdminCompanySwitcher: React.FC<{ 
+interface CompanyOverride {
+  account_name: string;
+  programType: 'GROW' | 'Scale';
+}
+
+const AdminCompanySwitcher: React.FC<{
   currentCompany: string;
   onCompanyChange: (company: string, programType: 'GROW' | 'Scale') => void;
 }> = ({ currentCompany, onCompanyChange }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [companies, setCompanies] = useState<{name: string, programType: 'GROW' | 'Scale'}[]>([]);
+  const [companies, setCompanies] = useState<CompanyOverride[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
@@ -77,35 +82,35 @@ const AdminCompanySwitcher: React.FC<{
         .from('session_tracking')
         .select('account_name, program_title')
         .order('account_name');
-      
+
       if (data) {
         // Get unique account_names with their program type
         const uniqueMap = new Map<string, 'GROW' | 'Scale'>();
         data.forEach(row => {
           if (row.account_name && !uniqueMap.has(row.account_name)) {
-            const isScale = row.program_title?.toUpperCase().includes('SCALE') || 
+            const isScale = row.program_title?.toUpperCase().includes('SCALE') ||
                            row.account_name?.toUpperCase().includes('SCALE');
             uniqueMap.set(row.account_name, isScale ? 'Scale' : 'GROW');
           }
         });
-        
-        const companyList = Array.from(uniqueMap.entries()).map(([name, programType]) => ({
-          name,
+
+        const companyList = Array.from(uniqueMap.entries()).map(([account_name, programType]) => ({
+          account_name,
           programType
         }));
-        setCompanies(companyList.sort((a, b) => a.name.localeCompare(b.name)));
+        setCompanies(companyList.sort((a, b) => a.account_name.localeCompare(b.account_name)));
       }
     };
     fetchCompanies();
   }, []);
 
-  const filteredCompanies = companies.filter(c => 
-    c.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredCompanies = companies.filter(c =>
+    c.account_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleSelect = (company: {name: string, programType: 'GROW' | 'Scale'}) => {
+  const handleSelect = (company: CompanyOverride) => {
     localStorage.setItem(ADMIN_COMPANY_KEY, JSON.stringify(company));
-    onCompanyChange(company.name, company.programType);
+    onCompanyChange(company.account_name, company.programType);
     setIsOpen(false);
     setSearchTerm('');
   };
@@ -141,13 +146,13 @@ const AdminCompanySwitcher: React.FC<{
           <div className="max-h-64 overflow-y-auto">
             {filteredCompanies.slice(0, 30).map((company) => (
               <button
-                key={company.name}
+                key={company.account_name}
                 onClick={() => handleSelect(company)}
                 className={`w-full px-4 py-2 text-left text-sm hover:bg-amber-50 flex items-center justify-between ${
-                  currentCompany === company.name ? 'bg-amber-100 font-bold' : ''
+                  currentCompany === company.account_name ? 'bg-amber-100 font-bold' : ''
                 }`}
               >
-                <span className="truncate">{company.name}</span>
+                <span className="truncate">{company.account_name}</span>
                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                   company.programType === 'Scale' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
                 }`}>
@@ -236,8 +241,8 @@ const MainPortalLayout: React.FC = () => {
           try {
             const stored = localStorage.getItem(ADMIN_COMPANY_KEY);
             if (stored) {
-              const override = JSON.parse(stored);
-              company = override.name;
+              const override = JSON.parse(stored) as CompanyOverride;
+              company = override.account_name;
               programTypeFromMeta = override.programType;
             }
           } catch {}

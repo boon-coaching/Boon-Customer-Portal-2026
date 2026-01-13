@@ -98,7 +98,7 @@ const ScaleDashboard: React.FC = () => {
             const stored = localStorage.getItem('boon_admin_company_override');
             if (stored) {
               const override = JSON.parse(stored);
-              company = override.name;
+              company = override.account_name;
               compId = override.id || compId;
               accName = override.account_name || accName;
             }
