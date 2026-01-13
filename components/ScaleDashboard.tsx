@@ -221,6 +221,14 @@ const ScaleDashboard: React.FC = () => {
       if (name) employeeLookup.set(name, e);
     });
 
+    // Build survey role lookup by email as fallback for missing employee_manager roles
+    const surveyRoleLookup = new Map<string, string>();
+    programFilteredWelcomeSurveys.forEach((s: any) => {
+      if (s.email && s.role) {
+        surveyRoleLookup.set(normalize(s.email), s.role);
+      }
+    });
+
     // Include only sessions that actually happened (exclude scheduled and coach no show)
     const completedSessions = programFilteredSessions.filter(s => {
       const status = normalize(s.status || '');
@@ -325,7 +333,14 @@ const ScaleDashboard: React.FC = () => {
       monthSessions.forEach(s => {
         const empName = normalize(s.employee_name || '');
         const employee = employeeLookup.get(empName);
-        const jobTitle = employee?.company_role || employee?.job_title;
+        let jobTitle = employee?.company_role || employee?.job_title;
+
+        // Fallback to welcome survey role if employee_manager doesn't have role data
+        if (!jobTitle && employee?.company_email) {
+          const surveyRole = surveyRoleLookup.get(normalize(employee.company_email));
+          if (surveyRole) jobTitle = surveyRole;
+        }
+
         const role = categorizeRole(jobTitle);
         roles[role] = (roles[role] || 0) + 1;
       });
