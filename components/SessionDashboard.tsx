@@ -566,7 +566,8 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
 
       const entry = statsMap.get(matchedKey)!;
       if (!entry.cohort && sessionCohort) entry.cohort = sessionCohort;
-      if (entry.program === 'Unassigned' && sessionProgram) entry.program = sessionProgram;
+      // Always use session's program_title - it's the source of truth for session counts
+      if (sessionProgram) entry.program = sessionProgram;
       if (!entry.email && email) entry.email = email;
       entry.status = 'active';
       // Session data takes precedence for name (since it has sessions tied to it)
