@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { isAdminEmail } from '../constants';
-import { getWelcomeSurveyData, getProgramConfig, getFocusAreaSelections, getBaselineCompetencyScores, getEmployeeRoster, CompanyFilter, buildCompanyFilter } from '../lib/dataFetcher';
+import { getWelcomeSurveyData, getWelcomeSurveyScaleData, getProgramConfig, getFocusAreaSelections, getBaselineCompetencyScores, getEmployeeRoster, getPrograms, CompanyFilter, buildCompanyFilter, Program } from '../lib/dataFetcher';
 import { WelcomeSurveyEntry, ProgramConfig, FocusAreaSelection, CompetencyScoreRecord, Employee } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import ExecutiveSignals from './ExecutiveSignals';
@@ -26,6 +26,7 @@ const BaselineDashboard: React.FC = () => {
   const [focusAreas, setFocusAreas] = useState<FocusAreaSelection[]>([]);
   const [baselineCompetencies, setBaselineCompetencies] = useState<CompetencyScoreRecord[]>([]);
   const [programConfig, setProgramConfig] = useState<ProgramConfig[]>([]);
+  const [programsLookup, setProgramsLookup] = useState<Program[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCohort, setSelectedCohort] = useState('All Programs');
@@ -73,14 +74,19 @@ const BaselineDashboard: React.FC = () => {
         setCompanyName(company);
         setAccountName(accName);
 
-        const [result, empData, focusData, competencyData, configData, benchmarkData] = await Promise.all([
+        const [growData, scaleData, empData, focusData, competencyData, configData, benchmarkData, programsData] = await Promise.all([
           getWelcomeSurveyData(companyFilter),
+          getWelcomeSurveyScaleData(companyFilter),
           getEmployeeRoster(companyFilter),
           getFocusAreaSelections(companyFilter),
           getBaselineCompetencyScores(companyFilter),
           getProgramConfig(companyFilter),
-          supabase.from('boon_benchmarks').select('*').eq('program_type', 'GROW')
+          supabase.from('boon_benchmarks').select('*').eq('program_type', 'SCALE'),
+          getPrograms(undefined, accName || company)
         ]);
+
+        // Combine data from both GROW and SCALE welcome surveys
+        const result = [...growData, ...scaleData];
 
         // Get Boon benchmarks from table (use GROW benchmarks for baseline comparison)
         const benchmarks = benchmarkData.data || [];
@@ -101,6 +107,7 @@ const BaselineDashboard: React.FC = () => {
         setFocusAreas(focusData);
         setBaselineCompetencies(competencyData);
         setProgramConfig(configData);
+        setProgramsLookup(programsData);
       } catch (err: any) {
         setError(err.message || 'Failed to load survey data');
       } finally {
@@ -111,59 +118,25 @@ const BaselineDashboard: React.FC = () => {
   }, []);
 
   const { filteredData, cohorts, stats } = useMemo(() => {
-    // Build start date map for sorting
-    const startDateMap = new Map<string, Date>();
-    programConfig.forEach(p => {
-      if (p.program_title && p.program_start_date) {
-        startDateMap.set(p.program_title, new Date(p.program_start_date));
+    // Count employees per program for sorting
+    const programCounts = new Map<string, number>();
+    employees.forEach(e => {
+      const pt = (e as any).program_title || (e as any).coaching_program;
+      if (pt) {
+        programCounts.set(pt, (programCounts.get(pt) || 0) + 1);
       }
     });
 
-    // Get available programs from multiple sources
-    const normalize = (s: string) => (s || '').toLowerCase().trim();
-    const currentAccount = normalize(
-      accountName ||
-      companyName.split(' - ')[0].replace(/\s+(SCALE|GROW|EXEC)$/i, '').trim()
-    );
-
-    // Helper to check if a record belongs to the current company
-    const matchesCompany = (acctName: string | undefined | null): boolean => {
-      if (!currentAccount) return true;
-      if (!acctName) return false;
-      const normalized = normalize(acctName);
-      return normalized.includes(currentAccount) || currentAccount.includes(normalized.split(' ')[0]);
-    };
-
-    // Get programs from multiple sources
-    const programSet = new Set<string>();
-
-    // 1. From employee_manager
-    employees.forEach(e => {
-      const pt = ((e as any).program_title || (e as any).program_name || e.cohort || e.program || '').trim();
-      const acct = (e as any).account_name || e.company_name || e.company;
-      if (pt && matchesCompany(acct)) programSet.add(pt);
-    });
-
-    // 2. From welcome survey data (in case not synced to employee_manager yet)
-    data.forEach(d => {
-      const pt = ((d as any).program_title || d.cohort || '').trim();
-      const acct = (d as any).account_name || (d as any).account;
-      if (pt && matchesCompany(acct)) programSet.add(pt);
-    });
-
-    const uniquePrograms = Array.from(programSet);
-
-    // Sort by start date (most recent first)
-    uniquePrograms.sort((a, b) => {
-      const dateA = startDateMap.get(a);
-      const dateB = startDateMap.get(b);
-      if (dateA && dateB) return dateB.getTime() - dateA.getTime();
-      if (dateA) return -1;
-      if (dateB) return 1;
+    // Use programs from lookup table, sorted by employee count
+    const programNames = programsLookup.map(p => p.name);
+    programNames.sort((a, b) => {
+      const countA = programCounts.get(a) || 0;
+      const countB = programCounts.get(b) || 0;
+      if (countB !== countA) return countB - countA;
       return a.localeCompare(b);
     });
 
-    const uniqueCohorts = ['All Programs', ...uniquePrograms];
+    const uniqueCohorts = ['All Programs', ...programNames];
 
     // Filter by program_title or cohort
     const filtered = selectedCohort === 'All Programs'
@@ -483,7 +456,7 @@ const BaselineDashboard: React.FC = () => {
         subTopics: analyzeSubTopics(filtered)
       }
     };
-  }, [data, employees, selectedCohort, programConfig, baselineCompetencies, accountName, companyName]);
+  }, [data, employees, selectedCohort, programsLookup, baselineCompetencies]);
 
   if (loading) {
      return (
