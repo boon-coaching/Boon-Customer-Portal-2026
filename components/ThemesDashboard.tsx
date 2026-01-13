@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import ExecutiveSignals from './ExecutiveSignals';
 
-type TimeRange = '3M' | '6M' | '12M' | 'ALL';
+type TimeRange = '3M' | '6M' | '12M';
 
 const COLORS = {
   mental: '#466FF6', // Boon Blue
@@ -31,7 +31,7 @@ const ThemesDashboard: React.FC = () => {
   const [programConfig, setProgramConfig] = useState<ProgramConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [timeRange, setTimeRange] = useState<TimeRange>('ALL');
+  const [timeRange, setTimeRange] = useState<TimeRange>('12M');
   const [selectedProgram, setSelectedProgram] = useState<string>('All Cohorts');
 
   useEffect(() => {
@@ -258,7 +258,7 @@ const ThemesDashboard: React.FC = () => {
 
           {/* Time Range Filter */}
           <div className="bg-white p-1 rounded-xl shadow-sm border border-gray-200 flex items-center overflow-x-auto">
-            {(['3M', '6M', '12M', 'ALL'] as TimeRange[]).map((range) => (
+            {(['3M', '6M', '12M'] as TimeRange[]).map((range) => (
               <button
                 key={range}
                 onClick={() => setTimeRange(range)}
@@ -268,7 +268,7 @@ const ThemesDashboard: React.FC = () => {
                     : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
                 }`}
               >
-                {range === 'ALL' ? 'All Time' : `Last ${range}`}
+                {`Last ${range}`}
               </button>
             ))}
           </div>
