@@ -170,6 +170,17 @@ const BaselineDashboard: React.FC = () => {
       return a.localeCompare(b);
     });
 
+    // Debug: log program extraction results
+    console.log('BaselineDashboard programs extracted:', {
+      fromLookup: programsLookup.length,
+      fromEmployees: employees.length,
+      fromSurveyData: data.length,
+      programSet: Array.from(programSet),
+      sampleEmployee: employees[0] ? { program_title: (employees[0] as any).program_title, coaching_program: (employees[0] as any).coaching_program } : null,
+      sampleSurvey: data[0] ? { program_title: (data[0] as any).program_title, cohort: (data[0] as any).cohort } : null,
+      previous_coaching_sample: data.slice(0, 5).map(d => (d as any).previous_coaching)
+    });
+
     const uniqueCohorts = ['All Programs', ...programNames];
 
     // Filter by program_title or cohort
