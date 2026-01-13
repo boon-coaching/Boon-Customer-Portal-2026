@@ -447,10 +447,15 @@ export const getWelcomeSurveyScaleData = async (filter?: CompanyFilter): Promise
 
   // Apply company filter
   // Note: welcome_survey_scale uses 'account' column, not 'account_name'
+  console.log('DEBUG getWelcomeSurveyScaleData filter:', filter);
   if (filter?.companyId) {
+    console.log('DEBUG filtering by company_id:', filter.companyId);
     query = query.eq('company_id', filter.companyId);
   } else if (filter?.accountName) {
+    console.log('DEBUG filtering by account ilike:', `%${filter.accountName}%`);
     query = query.ilike('account', `%${filter.accountName}%`);
+  } else {
+    console.log('DEBUG WARNING: No filter applied - returning ALL records');
   }
 
   const { data, error } = await query;
@@ -460,6 +465,11 @@ export const getWelcomeSurveyScaleData = async (filter?: CompanyFilter): Promise
     Sentry.captureException(error, { tags: { query: 'getWelcomeSurveyScaleData' } });
     return [];
   }
+
+  // DEBUG: Check what accounts were returned
+  const uniqueAccounts = [...new Set(data.map((d: any) => d.account))];
+  console.log('DEBUG unique accounts returned:', uniqueAccounts);
+  console.log('DEBUG total records returned:', data.length);
 
   // DEBUG: Check raw previous_coaching values before normalization
   const rawPcValues = data.map((d: any) => d.previous_coaching);

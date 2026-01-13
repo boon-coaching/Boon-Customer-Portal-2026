@@ -96,15 +96,18 @@ const ScaleBaselineDashboard: React.FC = () => {
         if (isAdmin) {
           try {
             const stored = localStorage.getItem('boon_admin_company_override');
+            console.log('DEBUG admin override raw:', stored);
             if (stored) {
               const override = JSON.parse(stored);
+              console.log('DEBUG admin override parsed:', override);
               company = override.account_name;
               companyId = override.id || companyId;
               accName = override.account_name || accName;
             }
           } catch {}
         }
-        
+
+        console.log('DEBUG filter inputs:', { companyId, accName, company });
         setCompanyName(accName || company);
 
         // Build company filter using helper
