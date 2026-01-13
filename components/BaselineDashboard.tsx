@@ -102,6 +102,13 @@ const BaselineDashboard: React.FC = () => {
         });
 
         // Data is already filtered by company at the query level
+        console.log('BaselineDashboard data loaded:', {
+          surveys: result.length,
+          employees: empData.length,
+          programs: programsData.length,
+          programNames: programsData.map(p => p.name),
+          companyFilter: accName || company
+        });
         setData(result);
         setEmployees(empData);
         setFocusAreas(focusData);
