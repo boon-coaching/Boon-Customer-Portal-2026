@@ -2,13 +2,15 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { isAdminEmail } from '../constants';
 import { supabase } from '../lib/supabaseClient';
-import { 
-  getDashboardSessions, 
-  getSurveyResponses, 
+import {
+  getDashboardSessions,
+  getSurveyResponses,
   getEmployeeRoster,
   getWelcomeSurveyScaleData,
+  getPrograms,
   CompanyFilter,
-  buildCompanyFilter
+  buildCompanyFilter,
+  Program
 } from '../lib/dataFetcher';
 import { 
   SessionWithEmployee, 
@@ -73,6 +75,7 @@ const ScaleDashboard: React.FC = () => {
   const [surveys, setSurveys] = useState<SurveyResponse[]>([]);
   const [welcomeSurveys, setWelcomeSurveys] = useState<any[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [programsLookup, setProgramsLookup] = useState<Program[]>([]);
   const [loading, setLoading] = useState(true);
   const [companyName, setCompanyName] = useState('');
   const [companyId, setCompanyId] = useState('');
@@ -116,16 +119,18 @@ const ScaleDashboard: React.FC = () => {
 
         console.log('ScaleDashboard using company filter:', companyFilter);
 
-        const [sessData, survData, empData, welcomeData] = await Promise.all([
+        const [sessData, survData, empData, welcomeData, programsData] = await Promise.all([
           getDashboardSessions(companyFilter),
           getSurveyResponses(companyFilter),
           getEmployeeRoster(companyFilter),
-          getWelcomeSurveyScaleData(companyFilter)
+          getWelcomeSurveyScaleData(companyFilter),
+          getPrograms(undefined, accName || company)
         ]);
         setSessions(sessData);
         setSurveys(survData);
         setEmployees(empData);
         setWelcomeSurveys(welcomeData);
+        setProgramsLookup(programsData);
       } catch (err) {
         console.error("Scale Dashboard Error:", err);
       } finally {
@@ -144,57 +149,31 @@ const ScaleDashboard: React.FC = () => {
     setProgramDropdownOpen(false);
   };
 
-  // Get unique programs from multiple sources to ensure all programs appear
+  // Get programs from lookup table, sorted by employee count
   const availablePrograms = useMemo(() => {
+    // Count employees per program for sorting
     const programCounts = new Map<string, number>();
-    const normalize = (s: string) => s?.toLowerCase().trim() || '';
-    const currentAccount = normalize(
-      accountName ||
-      companyName.split(' - ')[0].replace(/\s+(SCALE|GROW|EXEC)$/i, '').trim()
-    );
 
-    // Helper to check if a record belongs to the current company
-    const matchesCompany = (acctName: string | undefined | null): boolean => {
-      if (!currentAccount) return true; // No filter if no company set
-      if (!acctName) return false;
-      const normalized = normalize(acctName);
-      return normalized.includes(currentAccount) || currentAccount.includes(normalized.split(' ')[0]);
-    };
-
-    // 1. Count employees per program from employee_manager
     employees.forEach(e => {
       const pt = (e as any).program_title || (e as any).coaching_program;
-      const acct = (e as any).account_name || e.company_name || e.company;
-      if (pt && matchesCompany(acct)) {
+      if (pt) {
         programCounts.set(pt, (programCounts.get(pt) || 0) + 1);
       }
     });
 
-    // 2. Also get programs from sessions (in case not synced to employee_manager yet)
-    sessions.forEach(s => {
-      const pt = (s as any).program_title;
-      const acct = (s as any).account_name;
-      if (pt && matchesCompany(acct) && !programCounts.has(pt)) {
-        programCounts.set(pt, 0); // Add with 0 count if not in employee_manager
-      }
+    // Use programs from lookup table, sorted by employee count
+    const programNames = programsLookup.map(p => p.name);
+
+    // Sort by employee count (descending), then alphabetically
+    programNames.sort((a, b) => {
+      const countA = programCounts.get(a) || 0;
+      const countB = programCounts.get(b) || 0;
+      if (countB !== countA) return countB - countA;
+      return a.localeCompare(b);
     });
 
-    // 3. Also get programs from welcome surveys
-    welcomeSurveys.forEach(w => {
-      const pt = w.program_title;
-      const acct = w.account_name;
-      if (pt && matchesCompany(acct) && !programCounts.has(pt)) {
-        programCounts.set(pt, 0); // Add with 0 count if not in employee_manager
-      }
-    });
-
-    // Sort by employee count (descending)
-    const sorted = Array.from(programCounts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .map(([program]) => program);
-
-    return ['All Programs', ...sorted];
-  }, [employees, sessions, welcomeSurveys, accountName, companyName]);
+    return ['All Programs', ...programNames];
+  }, [programsLookup, employees]);
 
   const metrics = useMemo(() => {
     if (loading) return null;

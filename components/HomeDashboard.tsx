@@ -11,16 +11,18 @@ import {
   AnimatedProgressBar,
   SkeletonDashboard
 } from './Animations';
-import { 
-  getDashboardSessions, 
-  getCompetencyScores, 
-  getSurveyResponses, 
+import {
+  getDashboardSessions,
+  getCompetencyScores,
+  getSurveyResponses,
   getEmployeeRoster,
   getWelcomeSurveyData,
   getProgramConfig,
   getFocusAreaSelections,
+  getPrograms,
   CompanyFilter,
-  buildCompanyFilter
+  buildCompanyFilter,
+  Program
 } from '../lib/dataFetcher';
 import { 
   SessionWithEmployee, 
@@ -68,6 +70,7 @@ const HomeDashboard: React.FC = () => {
   const [baselineData, setBaselineData] = useState<WelcomeSurveyEntry[]>([]);
   const [focusAreas, setFocusAreas] = useState<FocusAreaSelection[]>([]);
   const [programConfig, setProgramConfig] = useState<ProgramConfig[]>([]);
+  const [programsLookup, setProgramsLookup] = useState<Program[]>([]);
   const [companyName, setCompanyName] = useState('');
   const [companyId, setCompanyId] = useState('');
   const [accountName, setAccountName] = useState('');
@@ -136,7 +139,7 @@ const HomeDashboard: React.FC = () => {
 
         console.log('HomeDashboard using company filter:', companyFilter);
 
-        const [sessData, compData, survData, empData, baseData, focusData, configData, benchmarkData] = await Promise.all([
+        const [sessData, compData, survData, empData, baseData, focusData, configData, benchmarkData, programsData] = await Promise.all([
           getDashboardSessions(companyFilter),
           getCompetencyScores(companyFilter),
           getSurveyResponses(companyFilter),
@@ -144,7 +147,8 @@ const HomeDashboard: React.FC = () => {
           getWelcomeSurveyData(companyFilter),
           getFocusAreaSelections(companyFilter),
           getProgramConfig(companyFilter),
-          supabase.from('boon_benchmarks').select('*').eq('program_type', 'GROW')
+          supabase.from('boon_benchmarks').select('*').eq('program_type', 'GROW'),
+          getPrograms(undefined, accName || company)
         ]);
 
         // Fetch welcome survey completions for utilization calculation
@@ -246,6 +250,7 @@ const HomeDashboard: React.FC = () => {
         setBaselineData(filteredBaseline);
         setFocusAreas(filteredFocusAreas);
         setProgramConfig(filteredConfig);
+        setProgramsLookup(programsData);
         
         // Fallback to data inference if auth metadata is missing
         if (!company && empData.length > 0 && empData[0].company) {
@@ -260,8 +265,7 @@ const HomeDashboard: React.FC = () => {
     fetchData();
   }, []);
 
-  // --- Derived Cohort List (sorted by program start date, most recent first) ---
-  // Use multiple sources to ensure all programs appear (some may only exist in certain tables)
+  // --- Derived Cohort List (from programs lookup table, sorted by employee count) ---
   const cohorts = useMemo(() => {
     // Build a map of program_title -> start_date from programConfig
     const startDateMap = new Map<string, Date>();
@@ -271,67 +275,34 @@ const HomeDashboard: React.FC = () => {
       }
     });
 
-    const allCohorts = new Set<string>();
-    const normalize = (s: string) => (s || '').toLowerCase().trim();
-    const currentAccount = normalize(
-      accountName ||
-      companyName.split(' - ')[0].replace(/\s+(SCALE|GROW|EXEC)$/i, '').trim()
-    );
-
-    // Helper to check if a record belongs to the current company
-    const matchesCompany = (acctName: string | undefined | null): boolean => {
-      if (!currentAccount) return true; // No filter if no company set
-      if (!acctName) return false;
-      const normalized = normalize(acctName);
-      return normalized.includes(currentAccount) || currentAccount.includes(normalized.split(' ')[0]);
-    };
-
-    // 1. Get cohorts from employee roster
+    // Count employees per program for sorting
+    const programCounts = new Map<string, number>();
     employees.forEach(e => {
-      const raw = ((e as any).program_title || (e as any).program_name || e.cohort || e.program || '').trim();
-      const normalized = PROGRAM_DISPLAY_NAMES[raw] || raw;
-      const acct = (e as any).account_name || (e as any).company_name || (e as any).company;
-      if (normalized && matchesCompany(acct)) allCohorts.add(normalized);
+      const pt = (e as any).program_title || (e as any).coaching_program;
+      if (pt) {
+        programCounts.set(pt, (programCounts.get(pt) || 0) + 1);
+      }
     });
 
-    // 2. Also get cohorts from sessions (in case not synced to employee_manager yet)
-    sessions.forEach(s => {
-      const raw = ((s as any).program_title || s.program_name || s.cohort || s.program || '').trim();
-      const normalized = PROGRAM_DISPLAY_NAMES[raw] || raw;
-      const acct = (s as any).account_name;
-      if (normalized && matchesCompany(acct)) allCohorts.add(normalized);
-    });
+    // Use programs from lookup table
+    const programNames = programsLookup.map(p => p.name);
 
-    // 3. Also get cohorts from welcome surveys
-    welcomeSurveys.forEach(w => {
-      const raw = (w.program_title || '').trim();
-      const normalized = PROGRAM_DISPLAY_NAMES[raw] || raw;
-      const acct = (w as any).account || (w as any).account_name;
-      if (normalized && matchesCompany(acct)) allCohorts.add(normalized);
-    });
-
-    // 4. Also get cohorts from baseline data
-    baselineData.forEach(b => {
-      const raw = ((b as any).program_title || b.cohort || '').trim();
-      const normalized = PROGRAM_DISPLAY_NAMES[raw] || raw;
-      const acct = (b as any).account_name || (b as any).account;
-      if (normalized && matchesCompany(acct)) allCohorts.add(normalized);
-    });
-
-    const unique = Array.from(allCohorts);
-
-    // Sort by start date (most recent first), then alphabetically for those without dates
-    unique.sort((a, b) => {
+    // Sort by start date (most recent first), then by employee count, then alphabetically
+    programNames.sort((a, b) => {
       const dateA = startDateMap.get(a);
       const dateB = startDateMap.get(b);
       if (dateA && dateB) return dateB.getTime() - dateA.getTime();
-      if (dateA) return -1; // a has date, b doesn't -> a first
-      if (dateB) return 1;  // b has date, a doesn't -> b first
-      return a.localeCompare(b); // Both no dates -> alphabetical
+      if (dateA) return -1;
+      if (dateB) return 1;
+      // If no dates, sort by employee count
+      const countA = programCounts.get(a) || 0;
+      const countB = programCounts.get(b) || 0;
+      if (countB !== countA) return countB - countA;
+      return a.localeCompare(b);
     });
 
-    return ['All Cohorts', ...unique];
-  }, [employees, sessions, welcomeSurveys, baselineData, programConfig, accountName, companyName]);
+    return ['All Cohorts', ...programNames];
+  }, [programsLookup, programConfig, employees]);
 
   const handleCohortChange = (cohort: string) => {
     setSearchParams({ cohort });

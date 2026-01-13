@@ -588,3 +588,94 @@ export const buildCompanyFilter = (
   // No filter - will return all data (should not happen in practice)
   return {};
 };
+
+// ============================================
+// LOOKUP TABLE QUERIES (Source of Truth)
+// ============================================
+
+export interface Company {
+  id: string;
+  name: string;
+  slug: string;
+  program_type?: string;
+  is_active?: boolean;
+}
+
+export interface Program {
+  id: string;
+  company_id: string;
+  name: string;
+  program_type?: 'GROW' | 'SCALE' | 'EXEC';
+  salesforce_id?: string;
+}
+
+/**
+ * Fetches all companies from the lookup table.
+ */
+export const getCompanies = async (): Promise<Company[]> => {
+  const { data, error } = await supabase
+    .from('companies')
+    .select('*')
+    .eq('is_active', true)
+    .order('name');
+
+  if (error) {
+    console.error('Error fetching companies:', error);
+    Sentry.captureException(error, { tags: { query: 'getCompanies' } });
+    return [];
+  }
+
+  return data as Company[];
+};
+
+/**
+ * Fetches programs for a specific company from the lookup table.
+ */
+export const getPrograms = async (companyId?: string, companyName?: string): Promise<Program[]> => {
+  let query = supabase
+    .from('programs')
+    .select('*, companies!inner(name)')
+    .order('name');
+
+  if (companyId) {
+    query = query.eq('company_id', companyId);
+  } else if (companyName) {
+    query = query.ilike('companies.name', `%${companyName}%`);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Error fetching programs:', error);
+    Sentry.captureException(error, { tags: { query: 'getPrograms' } });
+    return [];
+  }
+
+  return data as Program[];
+};
+
+/**
+ * Fetches programs for dropdown by company name.
+ * Returns sorted by employee count (requires joining with employee_manager).
+ */
+export const getProgramsForDropdown = async (companyName: string, programType?: 'GROW' | 'SCALE'): Promise<string[]> => {
+  let query = supabase
+    .from('programs')
+    .select('name, program_type, companies!inner(name)')
+    .ilike('companies.name', `%${companyName}%`)
+    .order('name');
+
+  if (programType) {
+    query = query.eq('program_type', programType);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Error fetching programs for dropdown:', error);
+    Sentry.captureException(error, { tags: { query: 'getProgramsForDropdown' } });
+    return [];
+  }
+
+  return data?.map(p => p.name) || [];
+};
