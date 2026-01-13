@@ -501,6 +501,20 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
       }
     });
 
+    // DEBUG: Log session filtering
+    const debugMatchingPrograms = sessions.filter(s => {
+      const prog = ((s as any).program_title || '').toLowerCase().trim();
+      const target = (filterValue || '').toLowerCase().trim();
+      return prog === target;
+    });
+    console.log('DEBUG SessionDashboard aggregation:', {
+      filterType,
+      filterValue,
+      totalSessionsInState: sessions.length,
+      sessionsMatchingProgram: debugMatchingPrograms.length,
+      uniquePrograms: [...new Set(sessions.map((s: any) => s.program_title))],
+    });
+
     // 2. Process Sessions (already filtered to exclude canceled in loadData)
     sessions.forEach(session => {
       const emp = session.employee_manager;
