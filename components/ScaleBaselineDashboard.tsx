@@ -213,18 +213,18 @@ const ScaleBaselineDashboard: React.FC = () => {
       tenureCounts[tenure] = (tenureCounts[tenure] || 0) + 1;
     });
 
-    // Previous coaching - handle numeric (0, 1) or boolean values
+    // Previous coaching - handle numeric (0, 1, 0.0, 1.0), string ('0', '1', '0.0', '1.0'), boolean, etc.
     const previousCoachingCounts: Record<string, number> = { 'Yes': 0, 'No': 0, 'Unknown': 0 };
     filteredData.forEach(s => {
-      // Fix: cast to any to allow loose comparison of legacy data types
       const val: any = s.previous_coaching;
-      // Check for truthy value (1, 1.0, true, "1", "yes", etc.)
-      if (val === 1 || val === 1.0 || val === true || val === '1' || val === 'yes' || val === 'Yes') {
+      // Use Number() to handle both numeric and string versions (1, 1.0, '1', '1.0')
+      if (val === null || val === undefined) {
+        previousCoachingCounts['Unknown']++;
+      } else if (Number(val) === 1 || val === true || val === 'Yes' || val === 'yes') {
         previousCoachingCounts['Yes']++;
-      } else if (val === 0 || val === false || val === '0' || val === 'no' || val === 'No') {
+      } else if (Number(val) === 0 || val === false || val === 'No' || val === 'no') {
         previousCoachingCounts['No']++;
       } else {
-        // null, undefined, or other values
         previousCoachingCounts['Unknown']++;
       }
     });

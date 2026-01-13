@@ -412,10 +412,10 @@ export const getWelcomeSurveyData = async (filter?: CompanyFilter): Promise<Welc
     age_range: d.age_range,
     tenure: d.tenure,
     years_experience: d.years_experience,
-    // Normalize previous_coaching: keep null as null (Unknown), true/1/Yes → '1', false/0/No → '0'
+    // Normalize previous_coaching: handle 1, 1.0, '1', '1.0', true, 'Yes' → '1'; 0, 0.0, '0', '0.0', false, 'No' → '0'
     previous_coaching: d.previous_coaching === null || d.previous_coaching === undefined
       ? null
-      : (d.previous_coaching === true || d.previous_coaching === 1 || d.previous_coaching === '1' || d.previous_coaching === 'Yes' || d.previous_coaching === 'yes')
+      : (Number(d.previous_coaching) === 1 || d.previous_coaching === true || d.previous_coaching === 'Yes' || d.previous_coaching === 'yes')
         ? '1'
         : '0',
     coaching_goals: d.coaching_goals,
@@ -468,9 +468,11 @@ export const getWelcomeSurveyScaleData = async (filter?: CompanyFilter): Promise
     tenure: d.tenure,
     years_experience: d.years_experience,
     // Normalize previous_coaching: convert various formats to '1' (Yes), '0' (No), or null (Unknown)
+    // Handle: 1, 1.0, '1', '1.0', true, 'Yes', 'yes' → '1'
+    // Handle: 0, 0.0, '0', '0.0', false, 'No', 'no' → '0'
     previous_coaching: d.previous_coaching === null || d.previous_coaching === undefined
-      ? null  // Keep null as null (will show as Unknown)
-      : (d.previous_coaching === true || d.previous_coaching === 1 || d.previous_coaching === '1' || d.previous_coaching === 'Yes' || d.previous_coaching === 'yes')
+      ? null
+      : (Number(d.previous_coaching) === 1 || d.previous_coaching === true || d.previous_coaching === 'Yes' || d.previous_coaching === 'yes')
         ? '1'
         : '0',
     coaching_goals: d.coaching_goals,
