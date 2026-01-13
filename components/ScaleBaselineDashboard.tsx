@@ -211,6 +211,8 @@ const ScaleBaselineDashboard: React.FC = () => {
 
     // Previous coaching - handle numeric (0, 1, 0.0, 1.0), string ('0', '1', '0.0', '1.0'), boolean, etc.
     const previousCoachingCounts: Record<string, number> = { 'Yes': 0, 'No': 0, 'Unknown': 0 };
+    // Debug: log sample values
+    console.log('Previous coaching sample values:', filteredData.slice(0, 5).map(s => ({ val: s.previous_coaching, type: typeof s.previous_coaching })));
     filteredData.forEach(s => {
       const val: any = s.previous_coaching;
       // Use Number() to handle both numeric and string versions (1, 1.0, '1', '1.0')
@@ -224,6 +226,7 @@ const ScaleBaselineDashboard: React.FC = () => {
         previousCoachingCounts['Unknown']++;
       }
     });
+    console.log('Previous coaching counts:', previousCoachingCounts);
     // Remove Unknown if count is 0
     if (previousCoachingCounts['Unknown'] === 0) {
       delete previousCoachingCounts['Unknown'];

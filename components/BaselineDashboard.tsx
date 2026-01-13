@@ -267,9 +267,13 @@ const BaselineDashboard: React.FC = () => {
 
         // Normalize previous_coaching values (0.0/1.0 → No/Yes)
         if (field === 'previous_coaching') {
-          if (val === 0 || val === 0.0 || val === '0' || val === '0.0' || val === false || val === 'false' || val === 'No' || val === 'no') {
+          // Use Number() conversion for robust float handling
+          const numVal = Number(val);
+          if (val === null || val === undefined || val === '') {
+            val = 'Unknown';
+          } else if (numVal === 0 || val === false || val === 'false' || val === 'No' || val === 'no') {
             val = 'No';
-          } else if (val === 1 || val === 1.0 || val === '1' || val === '1.0' || val === true || val === 'true' || val === 'Yes' || val === 'yes') {
+          } else if (numVal === 1 || val === true || val === 'true' || val === 'Yes' || val === 'yes') {
             val = 'Yes';
           } else {
             val = 'Unknown';
