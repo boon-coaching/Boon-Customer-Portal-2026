@@ -78,6 +78,8 @@ const AdminCompanySwitcher: React.FC<{
   useEffect(() => {
     // Fetch all distinct account_names from session_tracking
     const fetchCompanies = async () => {
+      console.log('AdminSwitcher: Starting to fetch companies...');
+
       // Paginate to get ALL records (Supabase defaults to 1000)
       let allData: any[] = [];
       let from = 0;
@@ -90,11 +92,23 @@ const AdminCompanySwitcher: React.FC<{
           .order('account_name')
           .range(from, from + pageSize - 1);
 
-        if (error || !data || data.length === 0) break;
+        if (error) {
+          console.error('AdminSwitcher: Query error:', error);
+          break;
+        }
+
+        if (!data || data.length === 0) {
+          console.log('AdminSwitcher: No more data at offset', from);
+          break;
+        }
+
+        console.log(`AdminSwitcher: Got ${data.length} rows at offset ${from}`);
         allData = [...allData, ...data];
         if (data.length < pageSize) break;
         from += pageSize;
       }
+
+      console.log(`AdminSwitcher: Total rows fetched: ${allData.length}`);
 
       if (allData.length > 0) {
         // Get unique account_names with their program type
@@ -112,7 +126,9 @@ const AdminCompanySwitcher: React.FC<{
           programType
         }));
         setCompanies(companyList.sort((a, b) => a.account_name.localeCompare(b.account_name)));
-        console.log(`Loaded ${companyList.length} companies for admin switcher`);
+        console.log(`AdminSwitcher: Loaded ${companyList.length} unique companies`);
+      } else {
+        console.warn('AdminSwitcher: No companies found - check RLS policies on session_tracking');
       }
     };
     fetchCompanies();
