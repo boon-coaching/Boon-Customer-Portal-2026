@@ -320,34 +320,18 @@ const HomeDashboard: React.FC = () => {
     const normalize = (str: string) => (str || '').toLowerCase().trim();
     const selNorm = normalize(selectedCohort);
     
-    // 1. Filter sessions to the selected cohort
+    // 1. Filter sessions to the selected cohort - use ONLY program_title for accurate filtering
     const cohortSessions = sessions.filter(s => {
         if (isAll) return true;
         const pTitle = normalize((s as any).program_title || '');
-        const pName = normalize(s.program_name || '');
-        const cName = normalize(s.cohort || '');
-        const pCode = normalize(s.program || '');
-        return pTitle === selNorm || pName === selNorm || cName === selNorm || pCode === selNorm;
+        return pTitle === selNorm;
     });
 
-    // DEBUG - session filtering
-    console.log('DEBUG SESSION FILTERING:', {
-      selectedCohort,
-      selNorm,
-      totalSessionsInState: sessions.length,
-      cohortSessionsCount: cohortSessions.length,
-      uniqueProgramTitles: [...new Set(sessions.map((s: any) => s.program_title))],
-      sampleSession: sessions[0]
-    });
-
-    // 2. Get total employees from roster (not just those with sessions)
+    // 2. Get total employees from roster - use program_title or coaching_program
     const enrolledEmployees = employees.filter(e => {
         if (isAll) return true;
-        const pt = normalize((e as any).program_title || '');
-        const p = normalize(e.program || '');
-        const pn = normalize(e.program_name || '');
-        const c = normalize(e.cohort || '');
-        return pt === selNorm || p === selNorm || pn === selNorm || c === selNorm;
+        const pt = normalize((e as any).program_title || (e as any).coaching_program || '');
+        return pt === selNorm;
     });
     
     // Total employees from roster (this is the denominator for utilization)
@@ -386,12 +370,11 @@ const HomeDashboard: React.FC = () => {
     
     const scheduledSessionsCount = cohortSessions.length;
 
-    // Filter competencies
+    // Filter competencies - use ONLY program_title
     const cohortCompetencies = competencies.filter(c => {
         if (isAll) return true;
         const pt = normalize((c as any).program_title || '');
-        const p = normalize(c.program || '');
-        return pt === selNorm || p === selNorm;
+        return pt === selNorm;
     });
 
     // Determine if Cohort is Completed - count only participants with BOTH pre AND post scores
