@@ -356,22 +356,26 @@ const ScaleDashboard: React.FC = () => {
       });
     });
 
-    // Filter surveys by account - use flexible matching to handle name variations
-    // e.g., "MacKenzie-Childs" should match "Mackenzie Childs", "Seubert & Associates" should match "Seubert"
-    // Note: Use separate normalization for survey matching to handle hyphens without affecting session filtering
-    const normalizeSurveyName = (s: string) => s?.toLowerCase().replace(/-/g, ' ').replace(/\s+/g, ' ').trim() || '';
-    const surveyAccountNorm = normalizeSurveyName(currentAccount);
-    const surveyFirstWord = surveyAccountNorm.split(/[\s&]/)[0];
-
-    const cohortSurveys = surveys.filter(s => {
-      const surveyAccount = normalizeSurveyName((s as any).account_name || '');
-      const surveyAccFirstWord = surveyAccount.split(/[\s&]/)[0];
-      // Multiple matching strategies for flexibility
-      return surveyAccount.includes(surveyFirstWord) ||
-             surveyFirstWord.includes(surveyAccFirstWord) ||
-             surveyAccountNorm.includes(surveyAccount) ||
-             surveyAccount.includes(surveyAccountNorm);
+    // Filter surveys by account - extract first word for matching since accounts may differ
+    // e.g., user company "Seubert & Associates" should match survey account "Seubert"
+    const accountFirstWord = currentAccount.split(/[\s&]/)[0]; // Get first word before space or &
+    
+    // Debug logging
+    console.log('Survey Debug:', {
+      companyName,
+      currentAccount,
+      accountFirstWord,
+      totalSurveys: surveys.length,
+      sampleSurveyAccounts: surveys.slice(0, 5).map(s => (s as any).account_name)
     });
+    
+    const cohortSurveys = surveys.filter(s => {
+      const surveyAccount = normalize((s as any).account_name || '');
+      const match = surveyAccount.includes(accountFirstWord) || accountFirstWord.includes(surveyAccount);
+      return match;
+    });
+    
+    console.log('Matched surveys:', cohortSurveys.length);
     
     const npsScores = cohortSurveys.map(s => s.nps).filter((s): s is number => s !== null && s !== undefined);
     const promoters = npsScores.filter(s => s >= 9).length;
@@ -955,19 +959,14 @@ const ScaleTestimonialsSection: React.FC<{
     }
   ];
   
-  // Normalize for survey matching: handle hyphens as spaces for flexible matching
-  const normalizeSurveyName = (str: string) => (str || '').toLowerCase().replace(/-/g, ' ').replace(/\s+/g, ' ').trim();
-  const currentAccount = normalizeSurveyName(companyName.split(' - ')[0]);
+  const normalize = (str: string) => (str || '').toLowerCase().trim();
+  const currentAccount = normalize(companyName.split(' - ')[0]);
   const accountFirstWord = currentAccount.split(/[\s&]/)[0];
-
-  // Filter surveys by company - flexible matching for name variations
+  
+  // Filter surveys by company
   const cohortSurveys = surveys.filter(s => {
-    const surveyAccount = normalizeSurveyName((s as any).account_name || '');
-    const surveyAccFirstWord = surveyAccount.split(/[\s&]/)[0];
-    return surveyAccount.includes(accountFirstWord) ||
-           accountFirstWord.includes(surveyAccFirstWord) ||
-           currentAccount.includes(surveyAccount) ||
-           surveyAccount.includes(currentAccount);
+    const surveyAccount = normalize((s as any).account_name || '');
+    return surveyAccount.includes(accountFirstWord) || accountFirstWord.includes(surveyAccount);
   });
   
   // Get all feedback text from touchpoint and feedback surveys

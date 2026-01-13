@@ -442,56 +442,24 @@ export const getWelcomeSurveyData = async (filter?: CompanyFilter): Promise<Welc
  */
 export const getWelcomeSurveyScaleData = async (filter?: CompanyFilter): Promise<WelcomeSurveyEntry[]> => {
   // TODO: Update when Scale data is migrated to survey_submissions
+  let query = supabase
+    .from('welcome_survey_scale')
+    .select('*');
 
-  // Try name-based filtering first, fallback to company_id if no results
-  let data: any[] | null = null;
-  let error: any = null;
-
-  const nameToMatch = filter?.accountName || filter?.companyName;
-
-  if (nameToMatch) {
-    // First attempt: try matching by account name
-    const nameQuery = supabase
-      .from('welcome_survey_scale')
-      .select('*')
-      .ilike('account', `%${nameToMatch}%`);
-
-    const nameResult = await nameQuery;
-    data = nameResult.data;
-    error = nameResult.error;
-
-    // If name matching returned no results and we have a company_id, try that as fallback
-    if (!error && (!data || data.length === 0) && filter?.companyId) {
-      console.log(`Baseline: Name match for "${nameToMatch}" returned 0 results, trying company_id fallback`);
-      const idQuery = supabase
-        .from('welcome_survey_scale')
-        .select('*')
-        .eq('company_id', filter.companyId);
-
-      const idResult = await idQuery;
-      data = idResult.data;
-      error = idResult.error;
-    }
+  // Apply company filter
+  // Note: welcome_survey_scale uses 'account' column for filtering
+  // IMPORTANT: company_id is unreliable in this table (multiple companies share same ID)
+  // So we prefer filtering by account name when available
+  if (filter?.accountName) {
+    query = query.ilike('account', `%${filter.accountName}%`);
+  } else if (filter?.companyName) {
+    query = query.ilike('account', `%${filter.companyName}%`);
   } else if (filter?.companyId) {
-    // No name available, use company_id directly
-    const query = supabase
-      .from('welcome_survey_scale')
-      .select('*')
-      .eq('company_id', filter.companyId);
-
-    const result = await query;
-    data = result.data;
-    error = result.error;
-  } else {
-    // No filter - fetch all (rare case)
-    const query = supabase
-      .from('welcome_survey_scale')
-      .select('*');
-
-    const result = await query;
-    data = result.data;
-    error = result.error;
+    // Fallback to company_id only if no name available (less reliable)
+    query = query.eq('company_id', filter.companyId);
   }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error('Error fetching Scale welcome survey data:', error);
