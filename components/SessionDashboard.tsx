@@ -702,22 +702,32 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
     return { nps, avgSat };
   }, [surveys, filteredData, filterType]);
 
-  // --- Derived KPIs ---
-  const totalEmployees = employees.length; // Total eligible employees
+  // --- Derived KPIs (all filtered by programFilter) ---
   const totalSessions = filteredData.reduce((acc, curr) => acc + curr.total, 0);
   const totalCompleted = filteredData.reduce((acc, curr) => acc + curr.completed, 0);
-  
+
+  // Total employees = employees with sessions in the filtered view
+  const totalEmployees = filteredData.length;
+
   // FIX: avg sessions = (completed + no-shows) / employees with sessions
   const employeesWithSessions = filteredData.filter(e => e.total > 0).length;
   const totalCompletedAndNoShows = filteredData.reduce((acc, curr) => acc + curr.completed + curr.noshow, 0);
-  const avgSessions = employeesWithSessions > 0 
-    ? (totalCompletedAndNoShows / employeesWithSessions).toFixed(1) 
+  const avgSessions = employeesWithSessions > 0
+    ? (totalCompletedAndNoShows / employeesWithSessions).toFixed(1)
     : '0.0';
 
-  // Utilization = (welcome survey completions) / (total employees in roster)
-  const surveyCompletions = welcomeSurveys.length;
-  const adoptionRate = totalEmployees > 0 
-    ? Math.round((surveyCompletions / totalEmployees) * 100) 
+  // Adoption = employees who completed welcome survey / total filtered employees
+  // Filter welcome surveys by program if a program is selected
+  const filteredWelcomeSurveys = programFilter === 'All'
+    ? welcomeSurveys
+    : welcomeSurveys.filter((ws: any) => {
+        const wsProgram = ws.program_title || ws.cohort || '';
+        return wsProgram.toLowerCase().includes(programFilter.toLowerCase()) ||
+               programFilter.toLowerCase().includes(wsProgram.toLowerCase());
+      });
+  const surveyCompletions = filteredWelcomeSurveys.length;
+  const adoptionRate = totalEmployees > 0
+    ? Math.round((surveyCompletions / totalEmployees) * 100)
     : 0;
 
   if (loading) {
