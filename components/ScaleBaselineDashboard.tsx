@@ -77,6 +77,8 @@ const ScaleBaselineDashboard: React.FC = () => {
   const [benchmarks, setBenchmarks] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [companyName, setCompanyName] = useState('');
+  const [selectedProgram, setSelectedProgram] = useState('All Programs');
+  const [programs, setPrograms] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -114,6 +116,18 @@ const ScaleBaselineDashboard: React.FC = () => {
         const data = await getWelcomeSurveyScaleData(companyFilter);
         setSurveyData(data as unknown as ScaleWelcomeSurvey[]);
 
+        // Extract unique programs from survey data
+        const uniquePrograms = new Set<string>();
+        data.forEach((d: any) => {
+          const pt = d.program_title || d.cohort;
+          if (pt && typeof pt === 'string' && pt.trim()) {
+            uniquePrograms.add(pt.trim());
+          }
+        });
+        setPrograms(['All Programs', ...Array.from(uniquePrograms).sort()]);
+
+        console.log('ScaleBaselineDashboard programs found:', Array.from(uniquePrograms));
+
         // Fetch benchmarks
         const { data: benchmarkData, error: benchmarkError } = await supabase
           .from('boon_benchmarks')
@@ -144,25 +158,35 @@ const ScaleBaselineDashboard: React.FC = () => {
   const metrics = useMemo(() => {
     if (loading || surveyData.length === 0) return null;
 
-    const total = surveyData.length;
+    // Filter by selected program
+    const filteredData = selectedProgram === 'All Programs'
+      ? surveyData
+      : surveyData.filter((s: any) => {
+          const pt = s.program_title || s.cohort;
+          return pt === selectedProgram;
+        });
+
+    if (filteredData.length === 0) return null;
+
+    const total = filteredData.length;
 
     // Role distribution
     const roleCounts: Record<string, number> = {};
-    surveyData.forEach(s => {
+    filteredData.forEach(s => {
       const role = s.role || 'Unknown';
       roleCounts[role] = (roleCounts[role] || 0) + 1;
     });
     const mostCommonRole = Object.entries(roleCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
 
     // Wellbeing averages
-    const avgSatisfaction = surveyData.reduce((sum, s) => sum + (s.satisfaction || 0), 0) / total;
-    const avgProductivity = surveyData.reduce((sum, s) => sum + (s.productivity || 0), 0) / total;
-    const avgWorkLifeBalance = surveyData.reduce((sum, s) => sum + (s.work_life_balance || 0), 0) / total;
+    const avgSatisfaction = filteredData.reduce((sum, s) => sum + (s.satisfaction || 0), 0) / total;
+    const avgProductivity = filteredData.reduce((sum, s) => sum + (s.productivity || 0), 0) / total;
+    const avgWorkLifeBalance = filteredData.reduce((sum, s) => sum + (s.work_life_balance || 0), 0) / total;
 
     // Focus areas - count how many selected each
     const focusAreaCounts: Record<string, number> = {};
     Object.keys(FOCUS_AREA_LABELS).forEach(key => {
-      focusAreaCounts[key] = surveyData.filter(s => (s as any)[key] === true).length;
+      focusAreaCounts[key] = filteredData.filter(s => (s as any)[key] === true).length;
     });
 
     // Sort focus areas by count
@@ -177,34 +201,41 @@ const ScaleBaselineDashboard: React.FC = () => {
 
     // Age distribution
     const ageCounts: Record<string, number> = {};
-    surveyData.forEach(s => {
+    filteredData.forEach(s => {
       const age = s.age_range || 'Unknown';
       ageCounts[age] = (ageCounts[age] || 0) + 1;
     });
 
     // Tenure distribution
     const tenureCounts: Record<string, number> = {};
-    surveyData.forEach(s => {
+    filteredData.forEach(s => {
       const tenure = s.tenure || 'Unknown';
       tenureCounts[tenure] = (tenureCounts[tenure] || 0) + 1;
     });
 
     // Previous coaching - handle numeric (0, 1) or boolean values
-    const previousCoachingCounts: Record<string, number> = { 'Yes': 0, 'No': 0 };
-    surveyData.forEach(s => {
+    const previousCoachingCounts: Record<string, number> = { 'Yes': 0, 'No': 0, 'Unknown': 0 };
+    filteredData.forEach(s => {
       // Fix: cast to any to allow loose comparison of legacy data types
       const val: any = s.previous_coaching;
       // Check for truthy value (1, 1.0, true, "1", "yes", etc.)
       if (val === 1 || val === 1.0 || val === true || val === '1' || val === 'yes' || val === 'Yes') {
         previousCoachingCounts['Yes']++;
-      } else {
+      } else if (val === 0 || val === false || val === '0' || val === 'no' || val === 'No') {
         previousCoachingCounts['No']++;
+      } else {
+        // null, undefined, or other values
+        previousCoachingCounts['Unknown']++;
       }
     });
+    // Remove Unknown if count is 0
+    if (previousCoachingCounts['Unknown'] === 0) {
+      delete previousCoachingCounts['Unknown'];
+    }
 
     // Gender distribution
     const genderCounts: Record<string, number> = {};
-    surveyData.forEach(s => {
+    filteredData.forEach(s => {
       const gender = s.gender || 'Unknown';
       genderCounts[gender] = (genderCounts[gender] || 0) + 1;
     });
@@ -230,7 +261,7 @@ const ScaleBaselineDashboard: React.FC = () => {
       genderCounts,
       newToCoachingPct
     };
-  }, [surveyData, loading]);
+  }, [surveyData, loading, selectedProgram]);
 
   if (loading) {
     return (
@@ -258,11 +289,29 @@ const ScaleBaselineDashboard: React.FC = () => {
   return (
     <div className="space-y-8 pb-12">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-black text-boon-dark flex items-center gap-3">
-          COHORT BASELINE <Target className="w-6 h-6 text-boon-purple" />
-        </h1>
-        <p className="text-gray-500 text-sm mt-1">Initial welcome survey data analysis.</p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-black text-boon-dark flex items-center gap-3">
+            COHORT BASELINE <Target className="w-6 h-6 text-boon-purple" />
+          </h1>
+          <p className="text-gray-500 text-sm mt-1">Initial welcome survey data analysis.</p>
+        </div>
+
+        {/* Program Selector */}
+        {programs.length > 1 && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-gray-400 uppercase">Program:</span>
+            <select
+              value={selectedProgram}
+              onChange={(e) => setSelectedProgram(e.target.value)}
+              className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 ring-boon-purple/30 shadow-sm cursor-pointer hover:border-boon-purple/50 transition"
+            >
+              {programs.map(p => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Summary Cards */}
