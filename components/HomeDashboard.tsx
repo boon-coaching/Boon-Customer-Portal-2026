@@ -229,8 +229,18 @@ const HomeDashboard: React.FC = () => {
           return matches;
         };
         
-        // Filter all data by company
-        const filteredSessions = sessData.filter(s => matchesCompany((s as any).account_name, (s as any).program_title));
+        // Helper to check if session is canceled (should be excluded)
+        const isCanceledSession = (status: string): boolean => {
+          const statusLower = (status || '').toLowerCase();
+          return statusLower === 'canceled' || statusLower === 'cancelled';
+        };
+
+        // Filter all data by company AND exclude canceled sessions
+        const filteredSessions = sessData.filter(s => {
+          const matchesCompanyFilter = matchesCompany((s as any).account_name, (s as any).program_title);
+          const isNotCanceled = !isCanceledSession((s as any).status || '');
+          return matchesCompanyFilter && isNotCanceled;
+        });
         console.log('DEBUG filtering - company:', company, 'sessData count:', sessData.length, 'filteredSessions count:', filteredSessions.length);
         if (sessData.length > 0 && filteredSessions.length === 0) {
           console.log('DEBUG sample session account_names:', sessData.slice(0, 5).map((s: any) => s.account_name));
