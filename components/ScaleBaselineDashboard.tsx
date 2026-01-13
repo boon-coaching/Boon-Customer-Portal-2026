@@ -143,6 +143,9 @@ const ScaleBaselineDashboard: React.FC = () => {
         });
         setPrograms(['All Programs', ...Array.from(uniquePrograms).sort()]);
 
+        // DEBUG: Show account + program_title pairs to identify data issues
+        const accountProgramPairs = [...new Set(data.map((d: any) => `${d.account} → ${d.program_title}`))];
+        console.log('DEBUG account → program_title pairs:', accountProgramPairs);
         console.log('ScaleBaselineDashboard programs found:', Array.from(uniquePrograms));
 
         // Fetch benchmarks
