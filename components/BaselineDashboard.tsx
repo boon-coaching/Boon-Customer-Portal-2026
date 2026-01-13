@@ -213,7 +213,21 @@ const BaselineDashboard: React.FC = () => {
     const getDistribution = (field: string) => {
       const counts: Record<string, number> = {};
       filtered.forEach(d => {
-        const val = d[field] || 'Unknown';
+        let val = d[field];
+
+        // Normalize previous_coaching values (0.0/1.0 → No/Yes)
+        if (field === 'previous_coaching') {
+          if (val === 0 || val === 0.0 || val === '0' || val === '0.0' || val === false || val === 'false' || val === 'No' || val === 'no') {
+            val = 'No';
+          } else if (val === 1 || val === 1.0 || val === '1' || val === '1.0' || val === true || val === 'true' || val === 'Yes' || val === 'yes') {
+            val = 'Yes';
+          } else {
+            val = 'Unknown';
+          }
+        } else {
+          val = val || 'Unknown';
+        }
+
         counts[val] = (counts[val] || 0) + 1;
       });
       return Object.entries(counts)
@@ -224,10 +238,10 @@ const BaselineDashboard: React.FC = () => {
             if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
             return b[1] - a[1]; // default frequency sort
         })
-        .map(([label, count]) => ({ 
-          label, 
-          count, 
-          pct: (count / filtered.length) * 100 
+        .map(([label, count]) => ({
+          label,
+          count,
+          pct: (count / filtered.length) * 100
         }));
     };
 

@@ -632,15 +632,43 @@ export const getCompanies = async (): Promise<Company[]> => {
  * Fetches programs for a specific company from the lookup table.
  */
 export const getPrograms = async (companyId?: string, companyName?: string): Promise<Program[]> => {
+  // If filtering by company name, first find matching company IDs
+  if (companyName && !companyId) {
+    const { data: companies } = await supabase
+      .from('companies')
+      .select('id')
+      .ilike('name', `%${companyName}%`);
+
+    if (!companies || companies.length === 0) {
+      console.log('No companies found matching:', companyName);
+      return [];
+    }
+
+    const companyIds = companies.map(c => c.id);
+
+    const { data, error } = await supabase
+      .from('programs')
+      .select('*')
+      .in('company_id', companyIds)
+      .order('name');
+
+    if (error) {
+      console.error('Error fetching programs:', error);
+      Sentry.captureException(error, { tags: { query: 'getPrograms' } });
+      return [];
+    }
+
+    return data as Program[];
+  }
+
+  // Direct company_id filter
   let query = supabase
     .from('programs')
-    .select('*, companies!inner(name)')
+    .select('*')
     .order('name');
 
   if (companyId) {
     query = query.eq('company_id', companyId);
-  } else if (companyName) {
-    query = query.ilike('companies.name', `%${companyName}%`);
   }
 
   const { data, error } = await query;
