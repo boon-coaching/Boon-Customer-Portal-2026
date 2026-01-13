@@ -261,8 +261,7 @@ const HomeDashboard: React.FC = () => {
   }, []);
 
   // --- Derived Cohort List (sorted by program start date, most recent first) ---
-  // Use employee_manager ONLY as the authoritative source for available programs
-  // This ensures the dropdown matches what's shown in the employee manager view
+  // Use multiple sources to ensure all programs appear (some may only exist in certain tables)
   const cohorts = useMemo(() => {
     // Build a map of program_title -> start_date from programConfig
     const startDateMap = new Map<string, Date>();
@@ -287,11 +286,35 @@ const HomeDashboard: React.FC = () => {
       return normalized.includes(currentAccount) || currentAccount.includes(normalized.split(' ')[0]);
     };
 
-    // Get cohorts ONLY from employee roster (authoritative source)
+    // 1. Get cohorts from employee roster
     employees.forEach(e => {
       const raw = ((e as any).program_title || (e as any).program_name || e.cohort || e.program || '').trim();
       const normalized = PROGRAM_DISPLAY_NAMES[raw] || raw;
       const acct = (e as any).account_name || (e as any).company_name || (e as any).company;
+      if (normalized && matchesCompany(acct)) allCohorts.add(normalized);
+    });
+
+    // 2. Also get cohorts from sessions (in case not synced to employee_manager yet)
+    sessions.forEach(s => {
+      const raw = ((s as any).program_title || s.program_name || s.cohort || s.program || '').trim();
+      const normalized = PROGRAM_DISPLAY_NAMES[raw] || raw;
+      const acct = (s as any).account_name;
+      if (normalized && matchesCompany(acct)) allCohorts.add(normalized);
+    });
+
+    // 3. Also get cohorts from welcome surveys
+    welcomeSurveys.forEach(w => {
+      const raw = (w.program_title || '').trim();
+      const normalized = PROGRAM_DISPLAY_NAMES[raw] || raw;
+      const acct = (w as any).account || (w as any).account_name;
+      if (normalized && matchesCompany(acct)) allCohorts.add(normalized);
+    });
+
+    // 4. Also get cohorts from baseline data
+    baselineData.forEach(b => {
+      const raw = ((b as any).program_title || b.cohort || '').trim();
+      const normalized = PROGRAM_DISPLAY_NAMES[raw] || raw;
+      const acct = (b as any).account_name || (b as any).account;
       if (normalized && matchesCompany(acct)) allCohorts.add(normalized);
     });
 
@@ -308,7 +331,7 @@ const HomeDashboard: React.FC = () => {
     });
 
     return ['All Cohorts', ...unique];
-  }, [employees, programConfig, accountName, companyName]);
+  }, [employees, sessions, welcomeSurveys, baselineData, programConfig, accountName, companyName]);
 
   const handleCohortChange = (cohort: string) => {
     setSearchParams({ cohort });

@@ -119,7 +119,7 @@ const BaselineDashboard: React.FC = () => {
       }
     });
 
-    // Get available programs from employee_manager (authoritative source)
+    // Get available programs from multiple sources
     const normalize = (s: string) => (s || '').toLowerCase().trim();
     const currentAccount = normalize(
       accountName ||
@@ -134,11 +134,20 @@ const BaselineDashboard: React.FC = () => {
       return normalized.includes(currentAccount) || currentAccount.includes(normalized.split(' ')[0]);
     };
 
-    // Get programs ONLY from employee_manager
+    // Get programs from multiple sources
     const programSet = new Set<string>();
+
+    // 1. From employee_manager
     employees.forEach(e => {
       const pt = ((e as any).program_title || (e as any).program_name || e.cohort || e.program || '').trim();
       const acct = (e as any).account_name || e.company_name || e.company;
+      if (pt && matchesCompany(acct)) programSet.add(pt);
+    });
+
+    // 2. From welcome survey data (in case not synced to employee_manager yet)
+    data.forEach(d => {
+      const pt = ((d as any).program_title || d.cohort || '').trim();
+      const acct = (d as any).account_name || (d as any).account;
       if (pt && matchesCompany(acct)) programSet.add(pt);
     });
 

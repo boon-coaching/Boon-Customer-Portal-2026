@@ -144,8 +144,7 @@ const ScaleDashboard: React.FC = () => {
     setProgramDropdownOpen(false);
   };
 
-  // Get unique programs from employee_manager ONLY (the authoritative source)
-  // This ensures the dropdown matches what's shown in the employee manager view
+  // Get unique programs from multiple sources to ensure all programs appear
   const availablePrograms = useMemo(() => {
     const programs = new Set<string>();
     const normalize = (s: string) => s?.toLowerCase().trim() || '';
@@ -162,15 +161,29 @@ const ScaleDashboard: React.FC = () => {
       return normalized.includes(currentAccount) || currentAccount.includes(normalized.split(' ')[0]);
     };
 
-    // Get programs ONLY from employee_manager (authoritative source)
+    // 1. Get programs from employee_manager
     employees.forEach(e => {
       const pt = (e as any).program_title || (e as any).coaching_program;
       const acct = (e as any).account_name || e.company_name || e.company;
       if (pt && matchesCompany(acct)) programs.add(pt);
     });
 
+    // 2. Also get programs from sessions (in case not synced to employee_manager yet)
+    sessions.forEach(s => {
+      const pt = (s as any).program_title;
+      const acct = (s as any).account_name;
+      if (pt && matchesCompany(acct)) programs.add(pt);
+    });
+
+    // 3. Also get programs from welcome surveys
+    welcomeSurveys.forEach(w => {
+      const pt = w.program_title;
+      const acct = w.account_name;
+      if (pt && matchesCompany(acct)) programs.add(pt);
+    });
+
     return ['All Programs', ...Array.from(programs).sort()];
-  }, [employees, accountName, companyName]);
+  }, [employees, sessions, welcomeSurveys, accountName, companyName]);
 
   const metrics = useMemo(() => {
     if (loading) return null;
