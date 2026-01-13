@@ -194,40 +194,37 @@ const HomeDashboard: React.FC = () => {
           inclusion: getBenchmark('baseline_inclusion') || getBenchmark('baseline_satisfaction')
         });
         
-        // Helper to normalize strings: lowercase, convert hyphens to spaces for flexible matching
-        const normalizeForMatch = (s: string) => s?.toLowerCase().replace(/-/g, ' ').replace(/\s+/g, ' ').trim() || '';
-
         // Helper to check if a value matches the company/account (case-insensitive, partial match)
         const matchesCompany = (value: string | undefined | null, programTitle?: string | null): boolean => {
           // If we have an account_name, use that for matching (groups multiple companies)
           if (accName) {
-            const accNameNorm = normalizeForMatch(accName);
+            const accNameLower = accName.toLowerCase();
             if (!value) return false;
-            const valueNorm = normalizeForMatch(value);
-            // Match if account_name appears in the value (handles "MacKenzie-Childs" vs "Mackenzie Childs")
-            return valueNorm.includes(accNameNorm) || accNameNorm.includes(valueNorm.split(' - ')[0]);
+            const valueLower = value.toLowerCase();
+            // Match if account_name appears in the value
+            return valueLower.includes(accNameLower) || accNameLower.includes(valueLower.split(' - ')[0]);
           }
-
+          
           // Fallback to original company matching logic
           if (!company) {
             console.log('DEBUG matchesCompany: company is empty');
             return false;
           }
-          const companyBase = normalizeForMatch(company.split(' - ')[0]);
-
+          const companyBase = company.split(' - ')[0].toLowerCase();
+          
           // Check if program_title starts with TWC (for Wonderful Company)
           if (companyBase.includes('wonderful') && programTitle && programTitle.toLowerCase().startsWith('twc')) {
             return true;
           }
-
+          
           if (!value) return false;
-          const valueBase = normalizeForMatch(value);
-
+          const valueBase = value.toLowerCase();
+          
           // Special case: Wonderful Orchards is part of The Wonderful Company
           if (companyBase.includes('wonderful') && valueBase.includes('wonderful')) {
             return true;
           }
-
+          
           const matches = valueBase.includes(companyBase) || companyBase.includes(valueBase.split(' - ')[0]);
           return matches;
         };
