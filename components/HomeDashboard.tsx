@@ -287,14 +287,8 @@ const HomeDashboard: React.FC = () => {
     // Use programs from lookup table
     const programNames = programsLookup.map(p => p.name);
 
-    // Sort by start date (most recent first), then by employee count, then alphabetically
+    // Sort by employee count (most to least), then alphabetically
     programNames.sort((a, b) => {
-      const dateA = startDateMap.get(a);
-      const dateB = startDateMap.get(b);
-      if (dateA && dateB) return dateB.getTime() - dateA.getTime();
-      if (dateA) return -1;
-      if (dateB) return 1;
-      // If no dates, sort by employee count
       const countA = programCounts.get(a) || 0;
       const countB = programCounts.get(b) || 0;
       if (countB !== countA) return countB - countA;
