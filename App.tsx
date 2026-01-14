@@ -80,8 +80,6 @@ const AdminCompanySwitcher: React.FC<{
   useEffect(() => {
     // Fetch all distinct account_names from session_tracking
     const fetchCompanies = async () => {
-      console.log('AdminSwitcher: Starting to fetch companies...');
-
       // Paginate to get ALL records (Supabase defaults to 1000)
       let allData: any[] = [];
       let from = 0;
@@ -100,17 +98,13 @@ const AdminCompanySwitcher: React.FC<{
         }
 
         if (!data || data.length === 0) {
-          console.log('AdminSwitcher: No more data at offset', from);
           break;
         }
 
-        console.log(`AdminSwitcher: Got ${data.length} rows at offset ${from}`);
         allData = [...allData, ...data];
         if (data.length < pageSize) break;
         from += pageSize;
       }
-
-      console.log(`AdminSwitcher: Total rows fetched: ${allData.length}`);
 
       if (allData.length > 0) {
         // Get unique account_names with their program type, employee count, and company_id
@@ -140,9 +134,6 @@ const AdminCompanySwitcher: React.FC<{
         }));
         // Sort by employee count (most to least)
         setCompanies(companyList.sort((a, b) => b.employeeCount - a.employeeCount));
-        console.log(`AdminSwitcher: Loaded ${companyList.length} unique companies`);
-      } else {
-        console.warn('AdminSwitcher: No companies found - check RLS policies on session_tracking');
       }
     };
     fetchCompanies();
@@ -408,18 +399,14 @@ const MainPortalLayout: React.FC = () => {
 
           const { data: sessionPrograms, error: sessionError } = await sessionQuery;
 
-          console.log('Session programs query:', { sessionPrograms, sessionError, companyId, companyBase });
-
           if (!sessionError && sessionPrograms && sessionPrograms.length > 0) {
             foundPrograms = [...new Set(
               sessionPrograms.map(s => s.program_title)
                 .filter(p => p && p.trim().length > 0)
             )] as string[];
-            console.log('Unique programs found from sessions:', foundPrograms);
-            
+
             // Set programs immediately when found
             if (foundPrograms.length > 0) {
-              console.log('Setting programs state to:', foundPrograms.sort());
               setPrograms(foundPrograms.sort());
             }
           }

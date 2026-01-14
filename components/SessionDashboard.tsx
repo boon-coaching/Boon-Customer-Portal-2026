@@ -113,8 +113,6 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
         // Build company filter using helper
         const companyFilter = buildCompanyFilter(companyId, accName, company);
 
-        console.log('SessionDashboard using company filter:', companyFilter);
-        
         const [sessionsData, rosterData, surveyData] = await Promise.all([
           getDashboardSessions(companyFilter),
           getEmployeeRoster(companyFilter),

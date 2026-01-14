@@ -64,8 +64,6 @@ const ThemesDashboard: React.FC = () => {
         // Build company filter using helper
         const companyFilter = buildCompanyFilter(companyId, accName, company);
 
-        console.log('ThemesDashboard using company filter:', companyFilter);
-        
         const [data, configData] = await Promise.all([
           getDashboardSessions(companyFilter),
           getProgramConfig(companyFilter)

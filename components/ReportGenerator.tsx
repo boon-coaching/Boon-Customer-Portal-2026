@@ -121,8 +121,6 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
     // Build company filter using helper
     const companyFilter = buildCompanyFilter(companyId, accName, company);
 
-    console.log('ReportGenerator using company filter:', companyFilter);
-    
     // Calculate date range filter
     const now = new Date();
     let startDate: Date | null = null;
