@@ -103,8 +103,6 @@ const ImpactDashboard: React.FC = () => {
         // Build company filter using helper
         const companyFilter = buildCompanyFilter(companyId, accName, company);
 
-        console.log('ImpactDashboard using company filter:', companyFilter);
-        
         const [compData, baseData, surveyData] = await Promise.all([
           getCompetencyScores(companyFilter),
           getWelcomeSurveyData(companyFilter),

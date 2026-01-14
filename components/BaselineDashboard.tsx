@@ -69,8 +69,6 @@ const BaselineDashboard: React.FC = () => {
         // Build company filter using helper
         const companyFilter = buildCompanyFilter(companyId, accName, company);
 
-        console.log('BaselineDashboard using company filter:', companyFilter);
-
         setCompanyName(company);
         setAccountName(accName);
 
@@ -103,17 +101,8 @@ const BaselineDashboard: React.FC = () => {
           productivity: getBenchmark('baseline_productivity'),
           work_life_balance: getBenchmark('baseline_work_life_balance')
         };
-        console.log('Boon benchmarks loaded:', { raw: benchmarks, scaled: boonAvgs });
         setBoonAverages(boonAvgs);
 
-        // Data is already filtered by company at the query level
-        console.log('BaselineDashboard data loaded:', {
-          surveys: result.length,
-          employees: empData.length,
-          programs: programsData.length,
-          programNames: programsData.map(p => p.name),
-          companyFilter: accName || company
-        });
         setData(result);
         setEmployees(empData);
         setFocusAreas(focusData);
@@ -173,17 +162,6 @@ const BaselineDashboard: React.FC = () => {
       const countB = programCounts.get(b) || 0;
       if (countB !== countA) return countB - countA;
       return a.localeCompare(b);
-    });
-
-    // Debug: log program extraction results
-    console.log('BaselineDashboard programs extracted:', {
-      fromLookup: programsLookup.length,
-      fromEmployees: employees.length,
-      fromSurveyData: data.length,
-      programSet: Array.from(programSet),
-      sampleEmployee: employees[0] ? { program_title: (employees[0] as any).program_title, coaching_program: (employees[0] as any).coaching_program } : null,
-      sampleSurvey: data[0] ? { program_title: (data[0] as any).program_title, cohort: (data[0] as any).cohort } : null,
-      previous_coaching_sample: data.slice(0, 5).map(d => (d as any).previous_coaching)
     });
 
     const uniqueCohorts = ['All Programs', ...programNames];

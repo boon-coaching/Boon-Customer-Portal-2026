@@ -50,8 +50,6 @@ const FeedbackDashboard: React.FC = () => {
         // Build company filter using helper
         const companyFilter = buildCompanyFilter(companyId, accName, company);
 
-        console.log('FeedbackDashboard using company filter:', companyFilter);
-
         const [surveys, roster, comps] = await Promise.all([
           getSurveyResponses(companyFilter),
           getEmployeeRoster(companyFilter),

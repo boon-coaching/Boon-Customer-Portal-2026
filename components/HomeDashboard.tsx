@@ -95,31 +95,21 @@ const HomeDashboard: React.FC = () => {
         let company = session?.user?.app_metadata?.company || '';
         let compId = session?.user?.app_metadata?.company_id || '';
         let accName = session?.user?.app_metadata?.account_name || '';
-        
-        // DEBUG - before override
-        console.log('DEBUG BEFORE OVERRIDE:', { company, compId, accName });
-        
+
         // Check for admin override
         if (isAdmin) {
           try {
             const stored = localStorage.getItem('boon_admin_company_override');
-            console.log('DEBUG OVERRIDE stored:', stored);
             if (stored) {
               const override = JSON.parse(stored);
-              console.log('DEBUG OVERRIDE parsed:', override);
               company = override.account_name;
               compId = override.company_id || compId;
               accName = override.account_name || accName;
             }
           } catch (e) {
-            console.log('DEBUG OVERRIDE error:', e);
+            // Ignore parse errors
           }
-        } else {
-          console.log('DEBUG: Not admin, skipping override check');
         }
-        
-        // DEBUG - after override
-        console.log('DEBUG AFTER OVERRIDE:', { company, compId, accName });
         
         if (company) {
           setCompanyName(company);
@@ -136,8 +126,6 @@ const HomeDashboard: React.FC = () => {
 
         // Build company filter using helper
         const companyFilter = buildCompanyFilter(compId, accName, company);
-
-        console.log('HomeDashboard using company filter:', companyFilter);
 
         const [sessData, compData, survData, empData, baseData, focusData, configData, benchmarkData, programsData] = await Promise.all([
           getDashboardSessions(companyFilter),
@@ -174,12 +162,6 @@ const HomeDashboard: React.FC = () => {
           welcomeSurveyData = wsData || [];
         }
 
-        // DEBUG - remove after fixing
-        console.log('DEBUG W&P surveys:', survData.filter(s => s.account_name?.includes('W&P')));
-        console.log('DEBUG survey program_titles:', [...new Set(survData.map(s => s.program_title))].slice(0, 20));
-        console.log('DEBUG first_session surveys:', survData.filter(s => s.survey_type === 'first_session'));
-        console.log('DEBUG programConfig:', configData);
-        
         // Set benchmarks
         const benchmarkRows = benchmarkData.data || [];
         const getBenchmark = (metric: string) => {
@@ -207,7 +189,6 @@ const HomeDashboard: React.FC = () => {
           
           // Fallback to original company matching logic
           if (!company) {
-            console.log('DEBUG matchesCompany: company is empty');
             return false;
           }
           const companyBase = company.split(' - ')[0].toLowerCase();
@@ -241,10 +222,6 @@ const HomeDashboard: React.FC = () => {
           const isNotCanceled = !isCanceledSession((s as any).status || '');
           return matchesCompanyFilter && isNotCanceled;
         });
-        console.log('DEBUG filtering - company:', company, 'sessData count:', sessData.length, 'filteredSessions count:', filteredSessions.length);
-        if (sessData.length > 0 && filteredSessions.length === 0) {
-          console.log('DEBUG sample session account_names:', sessData.slice(0, 5).map((s: any) => s.account_name));
-        }
         const filteredEmployees = empData.filter(e => matchesCompany((e as any).company_name) || matchesCompany((e as any).company));
         const filteredCompetencies = compData.filter(c => matchesCompany((c as any).account_name, (c as any).program_title));
         const filteredSurveys = survData.filter(s => matchesCompany((s as any).account_name, (s as any).program_title));
@@ -380,19 +357,7 @@ const HomeDashboard: React.FC = () => {
     // Determine if Cohort is Completed - count only participants with BOTH pre AND post scores
     const participantsWithBothScores = cohortCompetencies.filter(c => c.pre > 0 && c.post > 0);
     const participantCount = new Set(participantsWithBothScores.map(c => c.email)).size;
-    
-    // DEBUG - competency filtering
-    console.log('DEBUG competencies:', {
-      selectedCohort,
-      selNorm,
-      totalCompetencies: competencies.length,
-      cohortCompetencies: cohortCompetencies.length,
-      participantsWithBothScores: participantsWithBothScores.length,
-      participantCount,
-      sampleCompetency: competencies[0],
-      sampleCohortCompetency: cohortCompetencies[0]
-    });
-    
+
     // Also check for end_of_program surveys as an indicator of completion
     const endOfProgramSurveys = surveys.filter(s => {
         if ((s as any).survey_type !== 'end_of_program') return false;
@@ -448,17 +413,6 @@ const HomeDashboard: React.FC = () => {
     }
     
     const sessionsPerEmployee = config?.sessions_per_employee || 5;
-    
-    // Debug log for config matching
-    console.log('DEBUG config matching:', {
-      selectedCohort,
-      companyName,
-      currentAccountName,
-      programConfigCount: programConfig.length,
-      programConfigs: programConfig.map(p => ({ account_name: p.account_name, program_title: p.program_title, sessions: p.sessions_per_employee })),
-      matchedConfig: config ? { account_name: config.account_name, sessions: config.sessions_per_employee } : null,
-      sessionsPerEmployee
-    });
 
     const targetSessions = totalEmployeesCount * sessionsPerEmployee;
     const progressPct = targetSessions > 0 ? Math.min(100, Math.round((sessionsUsedCount / targetSessions) * 100)) : 0;
@@ -467,16 +421,6 @@ const HomeDashboard: React.FC = () => {
     const totalPre = participantsWithBothScores.reduce((acc, curr) => acc + curr.pre, 0);
     const totalPost = participantsWithBothScores.reduce((acc, curr) => acc + curr.post, 0);
     const growthPct = totalPre > 0 ? ((totalPost - totalPre) / totalPre) * 100 : 0;
-
-    // DEBUG - growth calculation
-    console.log('DEBUG growth:', {
-      selectedCohort,
-      totalPre,
-      totalPost,
-      growthPct,
-      participantCount,
-      sampleScores: participantsWithBothScores.slice(0, 3).map(c => ({ email: c.email, pre: c.pre, post: c.post }))
-    });
 
     // Filter surveys by program_title (for accurate NPS/CSAT per cohort)
     const validEmails = new Set(
