@@ -35,7 +35,67 @@ interface Employee {
   status: string;
 }
 
+interface DuplicateGroup {
+  employees: Employee[];
+  reason: string;
+}
+
 type ModalMode = 'add' | 'edit' | 'terminate' | 'delete' | null;
+
+// Helper function to check string similarity (simple approach)
+const areSimilarNames = (name1: string, name2: string): boolean => {
+  const n1 = name1.toLowerCase().trim();
+  const n2 = name2.toLowerCase().trim();
+
+  // Exact match
+  if (n1 === n2) return true;
+
+  // One is prefix of other (Chris vs Christopher)
+  if (n1.startsWith(n2) || n2.startsWith(n1)) return true;
+
+  // Common nickname patterns
+  const nicknames: Record<string, string[]> = {
+    'christopher': ['chris'],
+    'michael': ['mike'],
+    'william': ['will', 'bill'],
+    'robert': ['rob', 'bob'],
+    'elizabeth': ['liz', 'beth'],
+    'jennifer': ['jen', 'jenny'],
+    'katherine': ['kate', 'kathy', 'katie'],
+    'nicholas': ['nick'],
+    'richard': ['rick', 'dick'],
+    'james': ['jim', 'jimmy'],
+    'edward': ['ed', 'eddie'],
+    'joseph': ['joe', 'joey'],
+    'margaret': ['maggie', 'meg'],
+    'patricia': ['pat', 'patty'],
+    'alexander': ['alex'],
+    'anthony': ['tony'],
+    'benjamin': ['ben'],
+    'daniel': ['dan', 'danny'],
+    'matthew': ['matt'],
+    'samuel': ['sam'],
+    'thomas': ['tom', 'tommy'],
+    'timothy': ['tim'],
+    'jonathan': ['jon', 'john'],
+  };
+
+  for (const [full, nicks] of Object.entries(nicknames)) {
+    if ((n1 === full && nicks.includes(n2)) || (n2 === full && nicks.includes(n1))) {
+      return true;
+    }
+    if (nicks.includes(n1) && nicks.includes(n2)) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+// Helper to extract email prefix
+const getEmailPrefix = (email: string): string => {
+  return email.split('@')[0].toLowerCase().replace(/[^a-z]/g, '');
+};
 
 const EmployeeDashboard: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -52,6 +112,11 @@ const EmployeeDashboard: React.FC = () => {
   const [companyName, setCompanyName] = useState('');
   const [companyId, setCompanyId] = useState('');
   const [showBatchUpload, setShowBatchUpload] = useState(false);
+
+  // Duplicate detection state
+  const [dismissedDuplicates, setDismissedDuplicates] = useState<Set<string>>(new Set());
+  const [showDuplicateReview, setShowDuplicateReview] = useState(false);
+  const [selectedDuplicateGroup, setSelectedDuplicateGroup] = useState<DuplicateGroup | null>(null);
 
   // Fetch employees
   useEffect(() => {
@@ -189,6 +254,56 @@ const EmployeeDashboard: React.FC = () => {
   const activeCount = programFilteredEmployees.filter(e => e.status !== 'Inactive' && !e.end_date).length;
   const inactiveCount = programFilteredEmployees.filter(e => e.status === 'Inactive' || e.end_date).length;
 
+  // Detect potential duplicates
+  const potentialDuplicates = useMemo(() => {
+    const duplicateGroups: DuplicateGroup[] = [];
+    const processed = new Set<string | number>();
+
+    for (let i = 0; i < employees.length; i++) {
+      const emp1 = employees[i];
+      if (processed.has(emp1.id)) continue;
+
+      const group: Employee[] = [emp1];
+      let reason = '';
+
+      for (let j = i + 1; j < employees.length; j++) {
+        const emp2 = employees[j];
+        if (processed.has(emp2.id)) continue;
+
+        // Check for same last name + similar first name
+        if (emp1.last_name?.toLowerCase() === emp2.last_name?.toLowerCase()) {
+          if (areSimilarNames(emp1.first_name || '', emp2.first_name || '')) {
+            group.push(emp2);
+            reason = 'Similar names';
+            continue;
+          }
+        }
+
+        // Check for similar email prefix with same last name
+        if (emp1.last_name?.toLowerCase() === emp2.last_name?.toLowerCase()) {
+          const prefix1 = getEmailPrefix(emp1.company_email || '');
+          const prefix2 = getEmailPrefix(emp2.company_email || '');
+          if (prefix1 && prefix2 && (prefix1.includes(prefix2) || prefix2.includes(prefix1))) {
+            group.push(emp2);
+            reason = 'Similar email addresses';
+            continue;
+          }
+        }
+      }
+
+      if (group.length > 1) {
+        // Create a unique key for this group
+        const groupKey = group.map(e => e.id).sort().join('-');
+        if (!dismissedDuplicates.has(groupKey)) {
+          group.forEach(e => processed.add(e.id));
+          duplicateGroups.push({ employees: group, reason });
+        }
+      }
+    }
+
+    return duplicateGroups;
+  }, [employees, dismissedDuplicates]);
+
   const handleSort = (field: keyof Employee) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -239,6 +354,38 @@ const EmployeeDashboard: React.FC = () => {
     setShowBatchUpload(false);
   };
 
+  const handleDismissDuplicate = (group: DuplicateGroup) => {
+    const groupKey = group.employees.map(e => e.id).sort().join('-');
+    setDismissedDuplicates(prev => new Set([...prev, groupKey]));
+  };
+
+  const handleReviewDuplicate = (group: DuplicateGroup) => {
+    setSelectedDuplicateGroup(group);
+    setShowDuplicateReview(true);
+  };
+
+  const handleMergeEmployees = async (keepEmployee: Employee, deleteEmployee: Employee) => {
+    try {
+      // Delete the duplicate
+      const { error } = await supabase
+        .from('employee_manager')
+        .delete()
+        .eq('id', deleteEmployee.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setEmployees(employees.filter(e => e.id !== deleteEmployee.id));
+      setShowDuplicateReview(false);
+      setSelectedDuplicateGroup(null);
+    } catch (err: any) {
+      console.error('Error merging employees:', err);
+      alert(err.message?.includes('foreign key')
+        ? 'Cannot delete this employee because they have associated sessions. Please contact support.'
+        : 'Failed to merge employees. Please try again.');
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-8 space-y-6 animate-pulse max-w-7xl mx-auto">
@@ -268,6 +415,7 @@ const EmployeeDashboard: React.FC = () => {
           companyName={companyName}
           companyId={companyId}
           programs={programs.filter(p => p !== 'All')}
+          existingEmployees={employees}
           onClose={handleModalClose}
           onSave={handleSaveSuccess}
         />
@@ -281,6 +429,71 @@ const EmployeeDashboard: React.FC = () => {
           onClose={() => setShowBatchUpload(false)}
           onSuccess={handleBatchUploadSuccess}
         />
+      )}
+
+      {/* Duplicate Review Modal */}
+      {showDuplicateReview && selectedDuplicateGroup && (
+        <DuplicateMergeModal
+          group={selectedDuplicateGroup}
+          onClose={() => {
+            setShowDuplicateReview(false);
+            setSelectedDuplicateGroup(null);
+          }}
+          onMerge={handleMergeEmployees}
+          onDismiss={() => {
+            handleDismissDuplicate(selectedDuplicateGroup);
+            setShowDuplicateReview(false);
+            setSelectedDuplicateGroup(null);
+          }}
+        />
+      )}
+
+      {/* Duplicate Warning Banner */}
+      {potentialDuplicates.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h3 className="font-bold text-amber-800">
+                {potentialDuplicates.length} potential duplicate{potentialDuplicates.length > 1 ? 's' : ''} found
+              </h3>
+              <p className="text-sm text-amber-700 mt-1">
+                We detected employees that may be duplicates. Review and merge to keep your roster clean.
+              </p>
+              <div className="mt-3 space-y-2">
+                {potentialDuplicates.slice(0, 3).map((group, idx) => (
+                  <div key={idx} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-amber-100">
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="font-medium text-gray-900">
+                        {group.employees.map(e => `${e.first_name} ${e.last_name}`).join(' & ')}
+                      </span>
+                      <span className="text-amber-600 text-xs">({group.reason})</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleReviewDuplicate(group)}
+                        className="text-xs font-medium text-boon-blue hover:text-boon-darkBlue"
+                      >
+                        Review
+                      </button>
+                      <button
+                        onClick={() => handleDismissDuplicate(group)}
+                        className="text-xs text-gray-400 hover:text-gray-600"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {potentialDuplicates.length > 3 && (
+                  <p className="text-xs text-amber-600 mt-2">
+                    And {potentialDuplicates.length - 3} more...
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Header */}
@@ -607,6 +820,7 @@ const EmployeeModal = ({
   companyName,
   companyId,
   programs,
+  existingEmployees = [],
   onClose,
   onSave
 }: {
@@ -615,6 +829,7 @@ const EmployeeModal = ({
   companyName: string;
   companyId: string;
   programs: string[];
+  existingEmployees?: Employee[];
   onClose: () => void;
   onSave: (employee: Employee, action: 'create' | 'update' | 'delete') => void;
 }) => {
@@ -637,6 +852,26 @@ const EmployeeModal = ({
   const isTerminate = mode === 'terminate';
   const isEdit = mode === 'edit';
   const isAdd = mode === 'add';
+
+  // Check for potential duplicate when adding
+  const potentialDuplicate = useMemo(() => {
+    if (!isAdd) return null;
+    if (!formData.first_name && !formData.last_name && !formData.company_email) return null;
+
+    return existingEmployees.find(emp => {
+      // Check email match
+      if (formData.company_email && emp.company_email?.toLowerCase() === formData.company_email.toLowerCase()) {
+        return true;
+      }
+      // Check name match
+      if (formData.last_name && emp.last_name?.toLowerCase() === formData.last_name.toLowerCase()) {
+        if (areSimilarNames(formData.first_name || '', emp.first_name || '')) {
+          return true;
+        }
+      }
+      return false;
+    });
+  }, [isAdd, formData.first_name, formData.last_name, formData.company_email, existingEmployees]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -766,6 +1001,25 @@ const EmployeeModal = ({
             <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm flex items-center gap-2">
               <AlertCircle size={18} />
               {error}
+            </div>
+          )}
+
+          {/* Duplicate Warning */}
+          {isAdd && potentialDuplicate && (
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm">
+              <div className="flex items-start gap-2">
+                <AlertCircle size={18} className="mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-bold">Possible duplicate detected</p>
+                  <p className="mt-1">
+                    An employee named <strong>{potentialDuplicate.first_name} {potentialDuplicate.last_name}</strong>
+                    {potentialDuplicate.company_email && <> ({potentialDuplicate.company_email})</>} already exists.
+                  </p>
+                  <p className="mt-1 text-amber-600">
+                    Did you mean to edit the existing employee instead?
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 
@@ -1320,6 +1574,151 @@ const BatchUploadModal = ({
               </div>
             </div>
           )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Duplicate Merge Modal Component
+const DuplicateMergeModal = ({
+  group,
+  onClose,
+  onMerge,
+  onDismiss
+}: {
+  group: DuplicateGroup;
+  onClose: () => void;
+  onMerge: (keep: Employee, remove: Employee) => void;
+  onDismiss: () => void;
+}) => {
+  const [selectedToKeep, setSelectedToKeep] = useState<string | number | null>(null);
+  const [merging, setMerging] = useState(false);
+
+  const handleMerge = async () => {
+    if (!selectedToKeep) return;
+
+    const keepEmployee = group.employees.find(e => e.id === selectedToKeep);
+    const removeEmployee = group.employees.find(e => e.id !== selectedToKeep);
+
+    if (keepEmployee && removeEmployee) {
+      setMerging(true);
+      await onMerge(keepEmployee, removeEmployee);
+      setMerging(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-boon-dark/50 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden">
+        {/* Header */}
+        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-black uppercase tracking-tight text-boon-dark">
+              Review Potential Duplicate
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+              {group.reason} — Select the record to keep
+            </p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X size={24} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {group.employees.map((emp) => (
+              <div
+                key={emp.id}
+                onClick={() => setSelectedToKeep(emp.id)}
+                className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                  selectedToKeep === emp.id
+                    ? 'border-boon-blue bg-boon-blue/5'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-bold text-lg text-gray-900">
+                    {emp.first_name} {emp.last_name}
+                  </span>
+                  {selectedToKeep === emp.id && (
+                    <span className="text-xs font-bold text-boon-blue bg-boon-blue/10 px-2 py-1 rounded">
+                      KEEP
+                    </span>
+                  )}
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Email</span>
+                    <span className="text-gray-900 font-medium">{emp.company_email || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Department</span>
+                    <span className="text-gray-900">{emp.department || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Job Title</span>
+                    <span className="text-gray-900">{emp.job_title || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Program</span>
+                    <span className="text-gray-900">{emp.program_title || emp.program || '-'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Status</span>
+                    <span className={`font-medium ${emp.status === 'Active' ? 'text-boon-green' : 'text-gray-500'}`}>
+                      {emp.status || 'Active'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {selectedToKeep && (
+            <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-sm text-amber-800">
+                <strong>Note:</strong> The other record will be permanently deleted.
+                {group.employees.find(e => e.id !== selectedToKeep)?.company_email && (
+                  <> Any sessions associated with <strong>{group.employees.find(e => e.id !== selectedToKeep)?.company_email}</strong> will remain but may need manual cleanup.</>
+                )}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-6 border-t border-gray-100 flex justify-between items-center bg-gray-50">
+          <button
+            onClick={onDismiss}
+            className="text-sm text-gray-500 hover:text-gray-700"
+          >
+            Not a duplicate — Dismiss
+          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="px-5 py-2.5 border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-100 transition"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleMerge}
+              disabled={!selectedToKeep || merging}
+              className="px-5 py-2.5 bg-boon-blue text-white font-bold rounded-xl hover:bg-boon-darkBlue transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {merging ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Merging...
+                </>
+              ) : (
+                'Merge & Delete Duplicate'
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>
