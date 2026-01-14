@@ -21,7 +21,7 @@ const TASK_CATEGORIES = [
     label: 'Data Migration',
     icon: Database,
     tasks: [
-      { id: 'migrate_legacy', label: 'Import legacy data from Google Sheets', actionLabel: 'AI Assistant', actionType: 'link', actionUrl: '/import' },
+      { id: 'migrate_legacy', label: 'Import legacy data from Google Sheets (contact your Boon team)', actionLabel: null, actionType: 'checkbox' },
     ]
   },
   {
@@ -139,7 +139,12 @@ const SetupDashboard: React.FC = () => {
     'Building and Leading High-Performing Teams',
     'Influence and Stakeholder Management',
   ]);
-  const [growCompetencies, setGrowCompetencies] = useState<string[]>([]);
+  const [growCompetencies, setGrowCompetencies] = useState<string[]>([
+    'Effective Communication',
+    'Emotional Intelligence',
+    'Time Management and Productivity',
+    'Giving and Receiving Feedback',
+  ]);
   const [execLetEmployeesChoose, setExecLetEmployeesChoose] = useState(false);
   const [growLetEmployeesChoose, setGrowLetEmployeesChoose] = useState(false);
   const [accountTeam, setAccountTeam] = useState<Array<{
@@ -304,20 +309,27 @@ const SetupDashboard: React.FC = () => {
     fetchData();
   }, []);
 
-  const saveOnboardingData = async (newData: Partial<OnboardingData>, taskId: string) => {
-    if (!companyId) return;
-    
+  const saveOnboardingData = async (newData: Partial<OnboardingData>, taskId: string): Promise<boolean> => {
+    if (!companyId) return false;
+
     const updatedData = { ...onboardingData, ...newData };
-    setOnboardingData(updatedData);
-    
+
     try {
-      await supabase
+      const { error: updateError } = await supabase
         .from('program_config')
         .update({ onboarding_data: updatedData })
         .eq('company_id', companyId);
-      
+
+      if (updateError) {
+        console.error('Failed to save onboarding data:', updateError);
+        alert('Failed to save. Please try again.');
+        return false;
+      }
+
+      setOnboardingData(updatedData);
+
       // Mark task complete
-      await supabase
+      const { error: taskError } = await supabase
         .from('onboarding_tasks')
         .upsert({
           company_id: companyId,
@@ -325,10 +337,17 @@ const SetupDashboard: React.FC = () => {
           completed: true,
           completed_at: new Date().toISOString(),
         }, { onConflict: 'company_id,task_id' });
-      
+
+      if (taskError) {
+        console.error('Failed to mark task complete:', taskError);
+      }
+
       setTaskCompletions(prev => ({ ...prev, [taskId]: true }));
+      return true;
     } catch (err) {
       console.error('Failed to save onboarding data:', err);
+      alert('Failed to save. Please try again.');
+      return false;
     }
   };
 
@@ -734,24 +753,36 @@ const SetupDashboard: React.FC = () => {
                       const execProgram = programs.find(p => p.type === 'EXEC');
                       if (execProgram) {
                         const execValue = execLetEmployeesChoose ? ['EMPLOYEE_CHOICE'] : execCompetencies;
-                        await supabase
+                        const { error: execError } = await supabase
                           .from('program_config')
                           .update({ selected_competencies: execValue })
                           .eq('company_id', companyId)
                           .eq('program_type', 'EXEC');
+                        if (execError) {
+                          console.error('Failed to save EXEC competencies:', execError);
+                          alert('Failed to save focus areas. Please try again.');
+                          setSaving(null);
+                          return;
+                        }
                       }
-                      
+
                       const growProgram = programs.find(p => p.type === 'GROW');
                       if (growProgram) {
                         const growValue = growLetEmployeesChoose ? ['EMPLOYEE_CHOICE'] : growCompetencies;
-                        await supabase
+                        const { error: growError } = await supabase
                           .from('program_config')
                           .update({ selected_competencies: growValue })
                           .eq('company_id', companyId)
                           .eq('program_type', 'GROW');
+                        if (growError) {
+                          console.error('Failed to save GROW competencies:', growError);
+                          alert('Failed to save focus areas. Please try again.');
+                          setSaving(null);
+                          return;
+                        }
                       }
-                      
-                      await supabase
+
+                      const { error: taskError } = await supabase
                         .from('onboarding_tasks')
                         .upsert({
                           company_id: companyId,
@@ -759,9 +790,13 @@ const SetupDashboard: React.FC = () => {
                           completed: true,
                           completed_at: new Date().toISOString(),
                         }, { onConflict: 'company_id,task_id' });
+                      if (taskError) {
+                        console.error('Failed to mark task complete:', taskError);
+                      }
                       setTaskCompletions(prev => ({ ...prev, select_focus_areas: true }));
                     } catch (err) {
                       console.error('Failed to save competencies:', err);
+                      alert('Failed to save focus areas. Please try again.');
                     }
                     setSaving(null);
                   }}
@@ -982,15 +1017,22 @@ const SetupDashboard: React.FC = () => {
               if (!companyId || !tempDate) return;
               setSaving('launchDate');
               try {
-                await supabase
+                const { error: updateError } = await supabase
                   .from('program_config')
                   .update({ launch_date_override: tempDate })
                   .eq('company_id', companyId);
-                
+
+                if (updateError) {
+                  console.error('Failed to update launch date:', updateError);
+                  alert('Failed to save launch date. Please try again.');
+                  setSaving(null);
+                  return;
+                }
+
                 setLaunchDate(tempDate);
                 setShowDateModal(false);
-                
-                await supabase
+
+                const { error: taskError } = await supabase
                   .from('onboarding_tasks')
                   .upsert({
                     company_id: companyId,
@@ -998,9 +1040,13 @@ const SetupDashboard: React.FC = () => {
                     completed: true,
                     completed_at: new Date().toISOString(),
                   }, { onConflict: 'company_id,task_id' });
+                if (taskError) {
+                  console.error('Failed to mark task complete:', taskError);
+                }
                 setTaskCompletions(prev => ({ ...prev, schedule_launch: true }));
               } catch (err) {
                 console.error('Failed to update launch date:', err);
+                alert('Failed to save launch date. Please try again.');
               }
               setSaving(null);
             }}
@@ -1195,14 +1241,21 @@ const SetupDashboard: React.FC = () => {
               if (!companyId) return;
               setSaving('context');
               try {
-                await supabase
+                const { error: updateError } = await supabase
                   .from('program_config')
                   .update({ context_notes: tempContextNotes })
                   .eq('company_id', companyId);
-                
+
+                if (updateError) {
+                  console.error('Failed to save context:', updateError);
+                  alert('Failed to save company context. Please try again.');
+                  setSaving(null);
+                  return;
+                }
+
                 setContextNotes(tempContextNotes);
-                
-                await supabase
+
+                const { error: taskError } = await supabase
                   .from('onboarding_tasks')
                   .upsert({
                     company_id: companyId,
@@ -1210,12 +1263,16 @@ const SetupDashboard: React.FC = () => {
                     completed: true,
                     completed_at: new Date().toISOString(),
                   }, { onConflict: 'company_id,task_id' });
+                if (taskError) {
+                  console.error('Failed to mark task complete:', taskError);
+                }
                 setTaskCompletions(prev => ({ ...prev, company_context: true }));
+                setShowContextModal(false);
               } catch (err) {
                 console.error('Failed to save context:', err);
+                alert('Failed to save company context. Please try again.');
               }
               setSaving(null);
-              setShowContextModal(false);
             }}
             saveLabel={saving === 'context' ? 'Saving...' : 'Save'}
             saveDisabled={saving === 'context'}
