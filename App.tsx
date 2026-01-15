@@ -609,7 +609,7 @@ const MainPortalLayout: React.FC = () => {
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                Scale
+                SCALE
               </button>
               <button
                 onClick={() => handleProgramViewChange('GROW')}
@@ -762,15 +762,24 @@ const MainPortalLayout: React.FC = () => {
             {/* Setup route for onboarding */}
             <Route path="/setup" element={<SetupDashboard />} />
             {/* Dashboard route shows Scale or GROW based on program type */}
-            <Route path="/" element={isScale ? <ScaleDashboard /> : <HomeDashboard />} />
+            <Route path="/" element={isScale
+              ? <ScaleDashboard programTypeFilter={hasBothProgramTypes ? 'SCALE' : undefined} />
+              : <HomeDashboard programTypeFilter={hasBothProgramTypes ? 'GROW' : undefined} />
+            } />
             <Route path="/sessions" element={<SessionDashboard filterType={filterType} filterValue={filterValue} />} />
             <Route path="/employees" element={<EmployeeDashboard />} />
-            <Route path="/impact" element={<ImpactDashboard />} />
-            <Route path="/themes" element={<ThemesDashboard />} />
-            <Route path="/baseline" element={isScale && !hasBothProgramTypes ? <ScaleBaselineDashboard /> : <BaselineDashboard />} />
+            <Route path="/impact" element={<ImpactDashboard programTypeFilter={hasBothProgramTypes ? 'GROW' : undefined} />} />
+            <Route path="/themes" element={<ThemesDashboard programTypeFilter={hasBothProgramTypes ? selectedProgramView?.toUpperCase() : undefined} />} />
+            <Route path="/baseline" element={isScale && !hasBothProgramTypes
+              ? <ScaleBaselineDashboard />
+              : <BaselineDashboard programTypeFilter={hasBothProgramTypes ? selectedProgramView?.toUpperCase() : undefined} />
+            } />
             {/* Redirect /scale to / for Scale users, show Scale for GROW users who manually navigate */}
             <Route path="/scale" element={isScale ? <Navigate to="/" replace /> : <ScaleDashboard />} />
-            <Route path="*" element={isScale ? <ScaleDashboard /> : <HomeDashboard />} />
+            <Route path="*" element={isScale
+              ? <ScaleDashboard programTypeFilter={hasBothProgramTypes ? 'SCALE' : undefined} />
+              : <HomeDashboard programTypeFilter={hasBothProgramTypes ? 'GROW' : undefined} />
+            } />
           </Routes>
         </div>
       </main>

@@ -64,7 +64,11 @@ const getInterpretation = (topCompetencies: string[]): string => {
   return "These results suggest the program is effective at driving growth in key performance areas.";
 };
 
-const ImpactDashboard: React.FC = () => {
+interface ImpactDashboardProps {
+  programTypeFilter?: string;  // 'SCALE' | 'GROW' - for mixed companies
+}
+
+const ImpactDashboard: React.FC<ImpactDashboardProps> = ({ programTypeFilter }) => {
   const [scores, setScores] = useState<CompetencyScore[]>([]);
   const [baselineData, setBaselineData] = useState<WelcomeSurveyEntry[]>([]);
   const [surveys, setSurveys] = useState<SurveyResponse[]>([]);
@@ -135,10 +139,16 @@ const ImpactDashboard: React.FC = () => {
     const selNorm = normalize(selectedProgram);
 
     // 1. Determine Unique Programs from BOTH sources (prefer program_title) - trim whitespace
-    const uniquePrograms = ['All Programs', ...new Set([
+    let allPrograms = [...new Set([
         ...scores.map(s => ((s as any).program_title || s.program || '').trim()),
         ...baselineData.map(b => ((b as any).program_title || b.cohort || '').trim())
-    ].filter(Boolean))].sort();
+    ].filter(Boolean))];
+
+    // Filter by programTypeFilter if provided (for mixed companies)
+    if (programTypeFilter) {
+      allPrograms = allPrograms.filter(p => p.toUpperCase().includes(programTypeFilter));
+    }
+    const uniquePrograms = ['All Programs', ...allPrograms.sort()];
 
 
     // 2. Filter Impact Data by Program
@@ -245,7 +255,7 @@ const ImpactDashboard: React.FC = () => {
       baselineStats,
       hasImpactData
     };
-  }, [scores, baselineData, selectedProgram]);
+  }, [scores, baselineData, selectedProgram, programTypeFilter]);
 
   if (loading) return <div className="p-12 text-center text-gray-400">Loading impact data...</div>;
   if (error) return <div className="p-12 text-center text-red-500">{error}</div>;

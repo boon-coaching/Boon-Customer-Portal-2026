@@ -56,7 +56,11 @@ const PROGRAM_DISPLAY_NAMES: Record<string, string> = {
   'CP-0117': 'GROW - Cohort 2',
 };
 
-const HomeDashboard: React.FC = () => {
+interface HomeDashboardProps {
+  programTypeFilter?: string;  // 'SCALE' | 'GROW' - for mixed companies
+}
+
+const HomeDashboard: React.FC<HomeDashboardProps> = ({ programTypeFilter }) => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
@@ -272,7 +276,15 @@ const HomeDashboard: React.FC = () => {
     });
 
     // Use programs from lookup table
-    const programNames = programsLookup.map(p => p.name);
+    // Filter by programTypeFilter if provided (for mixed companies)
+    let filteredPrograms = programsLookup;
+    if (programTypeFilter) {
+      filteredPrograms = programsLookup.filter(p =>
+        p.name?.toUpperCase().includes(programTypeFilter) ||
+        p.program_type?.toUpperCase() === programTypeFilter
+      );
+    }
+    const programNames = filteredPrograms.map(p => p.name);
 
     // Sort by employee count (most to least), then alphabetically
     programNames.sort((a, b) => {
@@ -283,7 +295,7 @@ const HomeDashboard: React.FC = () => {
     });
 
     return ['All Cohorts', ...programNames];
-  }, [programsLookup, programConfig, employees]);
+  }, [programsLookup, programConfig, employees, programTypeFilter]);
 
   const handleCohortChange = (cohort: string) => {
     setSearchParams({ cohort });

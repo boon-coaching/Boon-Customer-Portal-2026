@@ -20,7 +20,11 @@ import {
   Target
 } from 'lucide-react';
 
-const BaselineDashboard: React.FC = () => {
+interface BaselineDashboardProps {
+  programTypeFilter?: string;  // 'SCALE' | 'GROW' - for mixed companies
+}
+
+const BaselineDashboard: React.FC<BaselineDashboardProps> = ({ programTypeFilter }) => {
   const [data, setData] = useState<WelcomeSurveyEntry[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [focusAreas, setFocusAreas] = useState<FocusAreaSelection[]>([]);
@@ -155,8 +159,11 @@ const BaselineDashboard: React.FC = () => {
       }
     });
 
-    // Convert to array and sort by employee count (descending)
-    const programNames = Array.from(programSet);
+    // Convert to array and filter by programTypeFilter if provided (for mixed companies)
+    let programNames = Array.from(programSet);
+    if (programTypeFilter) {
+      programNames = programNames.filter(p => p.toUpperCase().includes(programTypeFilter));
+    }
     programNames.sort((a, b) => {
       const countA = programCounts.get(a) || 0;
       const countB = programCounts.get(b) || 0;
@@ -502,7 +509,7 @@ const BaselineDashboard: React.FC = () => {
         subTopics: analyzeSubTopics(filtered)
       }
     };
-  }, [data, employees, selectedCohort, programsLookup, baselineCompetencies]);
+  }, [data, employees, selectedCohort, programsLookup, baselineCompetencies, programTypeFilter]);
 
   if (loading) {
      return (

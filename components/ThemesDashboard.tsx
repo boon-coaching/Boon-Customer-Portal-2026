@@ -26,7 +26,11 @@ const COLORS = {
   communication: '#FF8D80' // Boon Coral
 };
 
-const ThemesDashboard: React.FC = () => {
+interface ThemesDashboardProps {
+  programTypeFilter?: string;  // 'SCALE' | 'GROW' - for mixed companies
+}
+
+const ThemesDashboard: React.FC<ThemesDashboardProps> = ({ programTypeFilter }) => {
   const [sessions, setSessions] = useState<SessionWithEmployee[]>([]);
   const [programConfig, setProgramConfig] = useState<ProgramConfig[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,10 +92,18 @@ const ThemesDashboard: React.FC = () => {
   }, []);
 
   // Get unique programs sorted by start date
+  // Filter by programTypeFilter if provided (for mixed companies)
   const programs = useMemo(() => {
-    const uniquePrograms = [...new Set(programConfig.map(p => p.program_title).filter(Boolean))];
+    let filteredConfig = programConfig;
+    if (programTypeFilter) {
+      filteredConfig = programConfig.filter(p =>
+        p.program_title?.toUpperCase().includes(programTypeFilter) ||
+        p.program_type?.toUpperCase() === programTypeFilter
+      );
+    }
+    const uniquePrograms = [...new Set(filteredConfig.map(p => p.program_title).filter(Boolean))];
     return ['All Cohorts', ...uniquePrograms];
-  }, [programConfig]);
+  }, [programConfig, programTypeFilter]);
 
   // --- Data Processing ---
   const processedData = useMemo(() => {

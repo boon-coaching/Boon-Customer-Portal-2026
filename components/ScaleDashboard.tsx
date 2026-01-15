@@ -66,7 +66,11 @@ const ROLE_COLORS: Record<string, string> = {
 
 const ROLE_ORDER = ['Executive', 'Director', 'Manager', 'Senior', 'Individual Contributor', 'Entry-Level', 'Unknown'];
 
-const ScaleDashboard: React.FC = () => {
+interface ScaleDashboardProps {
+  programTypeFilter?: string;  // 'SCALE' | 'GROW' - for mixed companies
+}
+
+const ScaleDashboard: React.FC<ScaleDashboardProps> = ({ programTypeFilter }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const windowDays = parseInt(searchParams.get('windowDays') || '365', 10);
   const selectedProgram = searchParams.get('program') || 'All Programs';
@@ -160,7 +164,15 @@ const ScaleDashboard: React.FC = () => {
     });
 
     // Use programs from lookup table, sorted by employee count
-    const programNames = programsLookup.map(p => p.name);
+    // Filter by programTypeFilter if provided (for mixed companies)
+    let filteredPrograms = programsLookup;
+    if (programTypeFilter) {
+      filteredPrograms = programsLookup.filter(p =>
+        p.name?.toUpperCase().includes(programTypeFilter) ||
+        p.program_type?.toUpperCase() === programTypeFilter
+      );
+    }
+    const programNames = filteredPrograms.map(p => p.name);
 
     // Sort by employee count (descending), then alphabetically
     programNames.sort((a, b) => {
@@ -171,7 +183,7 @@ const ScaleDashboard: React.FC = () => {
     });
 
     return ['All Programs', ...programNames];
-  }, [programsLookup, employees]);
+  }, [programsLookup, employees, programTypeFilter]);
 
   const metrics = useMemo(() => {
     if (loading) return null;
