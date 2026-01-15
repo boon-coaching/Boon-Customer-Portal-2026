@@ -1,19 +1,56 @@
 import * as Sentry from '@sentry/react';
 import { supabase } from './supabaseClient';
-import { 
-  Employee, 
-  Session, 
-  DashboardStats, 
-  SessionWithEmployee, 
-  CompetencyScore, 
-  SurveyResponse, 
-  WelcomeSurveyEntry, 
+import {
+  Employee,
+  Session,
+  DashboardStats,
+  SessionWithEmployee,
+  CompetencyScore,
+  SurveyResponse,
+  WelcomeSurveyEntry,
   ProgramConfig,
   SurveySubmission,
   CompetencyPrePost,
   CompetencyScoreRecord,
   FocusAreaSelection
 } from '../types';
+
+// ============================================
+// SIMPLE IN-MEMORY CACHE
+// ============================================
+
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+const cache = new Map<string, CacheEntry<any>>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+const getCacheKey = (prefix: string, filter?: any): string => {
+  return `${prefix}:${JSON.stringify(filter || {})}`;
+};
+
+const getFromCache = <T>(key: string): T | null => {
+  const entry = cache.get(key);
+  if (!entry) return null;
+
+  if (Date.now() - entry.timestamp > CACHE_TTL) {
+    cache.delete(key);
+    return null;
+  }
+
+  return entry.data as T;
+};
+
+const setCache = <T>(key: string, data: T): void => {
+  cache.set(key, { data, timestamp: Date.now() });
+};
+
+// Clear cache (useful for forcing refresh)
+export const clearDataCache = (): void => {
+  cache.clear();
+};
 
 // ============================================
 // COMPANY FILTER CONTEXT
@@ -48,6 +85,10 @@ export interface CompanyFilter {
  * For multi-location accounts: accountName takes precedence to filter to specific location.
  */
 export const getEmployeeRoster = async (filter?: CompanyFilter): Promise<Employee[]> => {
+  const cacheKey = getCacheKey('employees', filter);
+  const cached = getFromCache<Employee[]>(cacheKey);
+  if (cached) return cached;
+
   let query = supabase
     .from('employee_manager')
     .select('*')
@@ -77,12 +118,15 @@ export const getEmployeeRoster = async (filter?: CompanyFilter): Promise<Employe
 
   console.log(`Fetched ${data?.length || 0} employees for company filter:`, filter);
 
-  return (data || []).map((d: any) => ({
+  const result = (data || []).map((d: any) => ({
     ...d,
     full_name: d.first_name && d.last_name ? `${d.first_name} ${d.last_name}` : d.email,
     name: d.first_name && d.last_name ? `${d.first_name} ${d.last_name}` : d.email,
     employee_name: d.first_name && d.last_name ? `${d.first_name} ${d.last_name}` : d.email,
   })) as Employee[];
+
+  setCache(cacheKey, result);
+  return result;
 };
 
 export const fetchEmployees = getEmployeeRoster;
@@ -95,6 +139,10 @@ export const fetchEmployees = getEmployeeRoster;
  * to filter to that specific location even if companyId is also set.
  */
 export const getDashboardSessions = async (filter?: CompanyFilter): Promise<SessionWithEmployee[]> => {
+  const cacheKey = getCacheKey('sessions', filter);
+  const cached = getFromCache<SessionWithEmployee[]>(cacheKey);
+  if (cached) return cached;
+
   let allData: any[] = [];
   let offset = 0;
   const batchSize = 1000;
@@ -141,6 +189,7 @@ export const getDashboardSessions = async (filter?: CompanyFilter): Promise<Sess
   }
 
   console.log(`Fetched ${allData.length} total sessions for company filter:`, filter);
+  setCache(cacheKey, allData);
   return allData as SessionWithEmployee[];
 };
 
@@ -468,6 +517,10 @@ export const getSurveyResponses = async (filter?: CompanyFilter): Promise<Survey
  * Uses welcome_survey_baseline table which has comp_* competency fields.
  */
 export const getWelcomeSurveyData = async (filter?: CompanyFilter): Promise<WelcomeSurveyEntry[]> => {
+  const cacheKey = getCacheKey('welcomeSurveyBaseline', filter);
+  const cached = getFromCache<WelcomeSurveyEntry[]>(cacheKey);
+  if (cached) return cached;
+
   let query = supabase
     .from('welcome_survey_baseline')
     .select('*');
@@ -501,7 +554,7 @@ export const getWelcomeSurveyData = async (filter?: CompanyFilter): Promise<Welc
   }
 
   // Map to WelcomeSurveyEntry format - spread all fields to include sub_* columns
-  return data.map((d: any) => ({
+  const result = data.map((d: any) => ({
     ...d, // Include ALL fields from database (including sub_* columns)
     // Override/normalize specific fields
     email: d.email,
@@ -528,6 +581,9 @@ export const getWelcomeSurveyData = async (filter?: CompanyFilter): Promise<Welc
     company_id: d.company_id,
     account: d.account,
   })) as WelcomeSurveyEntry[];
+
+  setCache(cacheKey, result);
+  return result;
 };
 
 /**
@@ -535,6 +591,10 @@ export const getWelcomeSurveyData = async (filter?: CompanyFilter): Promise<Welc
  * For now, falls back to legacy table until Scale data is migrated.
  */
 export const getWelcomeSurveyScaleData = async (filter?: CompanyFilter): Promise<WelcomeSurveyEntry[]> => {
+  const cacheKey = getCacheKey('welcomeSurveyScale', filter);
+  const cached = getFromCache<WelcomeSurveyEntry[]>(cacheKey);
+  if (cached) return cached;
+
   // TODO: Update when Scale data is migrated to survey_submissions
   let query = supabase
     .from('welcome_survey_scale')
@@ -573,7 +633,7 @@ export const getWelcomeSurveyScaleData = async (filter?: CompanyFilter): Promise
   }
 
   // Normalize data to match WelcomeSurveyEntry format (same as GROW data)
-  return data.map((d: any) => ({
+  const result = data.map((d: any) => ({
     ...d,
     email: d.email,
     cohort: d.cohort || d.program_title || '',
@@ -600,6 +660,9 @@ export const getWelcomeSurveyScaleData = async (filter?: CompanyFilter): Promise
     account_name: d.account_name,
     company_id: d.company_id,
   })) as WelcomeSurveyEntry[];
+
+  setCache(cacheKey, result);
+  return result;
 };
 
 /**
