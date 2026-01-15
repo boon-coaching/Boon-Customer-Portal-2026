@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { isAdminEmail } from '../constants';
-import { getCompetencyScores, getWelcomeSurveyData, getSurveyResponses, CompanyFilter, buildCompanyFilter } from '../lib/dataFetcher';
+import { getCompetencyScores, getWelcomeSurveyData, getSurveyResponses, getPrograms, CompanyFilter, buildCompanyFilter, Program } from '../lib/dataFetcher';
 import { CompetencyScore, WelcomeSurveyEntry, SurveyResponse } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import ExecutiveSignals from './ExecutiveSignals';
@@ -72,6 +72,7 @@ const ImpactDashboard: React.FC<ImpactDashboardProps> = ({ programTypeFilter }) 
   const [scores, setScores] = useState<CompetencyScore[]>([]);
   const [baselineData, setBaselineData] = useState<WelcomeSurveyEntry[]>([]);
   const [surveys, setSurveys] = useState<SurveyResponse[]>([]);
+  const [programsLookup, setProgramsLookup] = useState<Program[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedProgram, setSelectedProgram] = useState('All Programs');
@@ -107,16 +108,18 @@ const ImpactDashboard: React.FC<ImpactDashboardProps> = ({ programTypeFilter }) 
         // Build company filter using helper
         const companyFilter = buildCompanyFilter(companyId, accName, company);
 
-        const [compData, baseData, surveyData] = await Promise.all([
+        const [compData, baseData, surveyData, programsData] = await Promise.all([
           getCompetencyScores(companyFilter),
           getWelcomeSurveyData(companyFilter),
-          getSurveyResponses(companyFilter)
+          getSurveyResponses(companyFilter),
+          getPrograms(undefined, accName || company)
         ]);
-        
+
         // Data is already filtered by company at the query level
         setScores(compData);
         setBaselineData(baseData);
         setSurveys(surveyData);
+        setProgramsLookup(programsData);
       } catch (err: any) {
         setError(err.message || 'Failed to load competency data');
       } finally {
@@ -138,11 +141,30 @@ const ImpactDashboard: React.FC<ImpactDashboardProps> = ({ programTypeFilter }) 
     const normalize = (str: string) => (str || '').toLowerCase().trim();
     const selNorm = normalize(selectedProgram);
 
-    // 1. Determine Unique Programs from BOTH sources (prefer program_title) - trim whitespace
-    let allPrograms = [...new Set([
-        ...scores.map(s => ((s as any).program_title || s.program || '').trim()),
-        ...baselineData.map(b => ((b as any).program_title || b.cohort || '').trim())
-    ].filter(Boolean))];
+    // 1. Determine Unique Programs from multiple sources:
+    // - Programs lookup table (authoritative source)
+    // - Competency scores data
+    // - Baseline data
+    const programSet = new Set<string>();
+
+    // From programs lookup table
+    programsLookup.forEach(p => {
+      if (p.name) programSet.add(p.name.trim());
+    });
+
+    // From competency scores
+    scores.forEach(s => {
+      const pt = ((s as any).program_title || s.program || '').trim();
+      if (pt) programSet.add(pt);
+    });
+
+    // From baseline data
+    baselineData.forEach(b => {
+      const pt = ((b as any).program_title || b.cohort || '').trim();
+      if (pt) programSet.add(pt);
+    });
+
+    let allPrograms = Array.from(programSet);
 
     // Filter by programTypeFilter if provided (for mixed companies)
     if (programTypeFilter) {
@@ -261,7 +283,7 @@ const ImpactDashboard: React.FC<ImpactDashboardProps> = ({ programTypeFilter }) 
       baselineStats,
       hasImpactData
     };
-  }, [scores, baselineData, selectedProgram, programTypeFilter]);
+  }, [scores, baselineData, selectedProgram, programTypeFilter, programsLookup]);
 
   if (loading) return <div className="p-12 text-center text-gray-400">Loading impact data...</div>;
   if (error) return <div className="p-12 text-center text-red-500">{error}</div>;
