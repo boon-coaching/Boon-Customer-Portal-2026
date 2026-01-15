@@ -143,18 +143,20 @@ const BaselineDashboard: React.FC<BaselineDashboardProps> = ({ programTypeFilter
       if (p.name) programSet.add(p.name);
     });
 
-    // From employees
+    // From employees (only use program_title, not generic coaching_program)
     employees.forEach(e => {
-      const pt = (e as any).program_title || (e as any).coaching_program;
-      if (pt && typeof pt === 'string' && pt.trim()) {
+      const pt = (e as any).program_title;
+      if (pt && typeof pt === 'string' && pt.trim() &&
+          pt.trim().toUpperCase() !== 'SCALE' && pt.trim().toUpperCase() !== 'GROW') {
         programSet.add(pt.trim());
       }
     });
 
-    // From survey data
+    // From survey data (filter out generic names)
     data.forEach(d => {
       const pt = (d as any).program_title || (d as any).cohort;
-      if (pt && typeof pt === 'string' && pt.trim()) {
+      if (pt && typeof pt === 'string' && pt.trim() &&
+          pt.trim().toUpperCase() !== 'SCALE' && pt.trim().toUpperCase() !== 'GROW') {
         programSet.add(pt.trim());
       }
     });
