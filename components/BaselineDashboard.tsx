@@ -173,9 +173,15 @@ const BaselineDashboard: React.FC<BaselineDashboardProps> = ({ programTypeFilter
 
     const uniqueCohorts = ['All Programs', ...programNames];
 
+    // Helper to check if a program matches the programTypeFilter
+    const matchesProgramFilter = (programTitle: string) => {
+      if (!programTypeFilter) return true;
+      return programTitle?.toUpperCase().includes(programTypeFilter);
+    };
+
     // Filter by program_title or cohort
     const filtered = selectedCohort === 'All Programs'
-      ? data
+      ? data.filter(d => matchesProgramFilter((d as any).program_title || d.cohort || ''))
       : data.filter(d => {
           const pt = (d as any).program_title || d.cohort || '';
           return pt === selectedCohort;
@@ -217,9 +223,11 @@ const BaselineDashboard: React.FC<BaselineDashboardProps> = ({ programTypeFilter
     // 3. Competencies (Average) from competency_scores table - keep on 1-5 scale
     // Filter competencies by the same cohort filter
     const cohortCompetencies = baselineCompetencies.filter(c => {
-      if (selectedCohort === 'All Programs') return true;
-      const pt = (c.program_title || '').toLowerCase();
-      return pt === selectedCohort.toLowerCase();
+      const pt = c.program_title || '';
+      if (selectedCohort === 'All Programs') {
+        return matchesProgramFilter(pt);
+      }
+      return pt.toLowerCase() === selectedCohort.toLowerCase();
     });
     
     // Aggregate by competency name

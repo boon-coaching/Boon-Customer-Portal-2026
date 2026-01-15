@@ -151,9 +151,15 @@ const ImpactDashboard: React.FC<ImpactDashboardProps> = ({ programTypeFilter }) 
     const uniquePrograms = ['All Programs', ...allPrograms.sort()];
 
 
+    // Helper to check if a program matches the programTypeFilter
+    const matchesProgramFilter = (programTitle: string) => {
+      if (!programTypeFilter) return true;
+      return programTitle?.toUpperCase().includes(programTypeFilter);
+    };
+
     // 2. Filter Impact Data by Program
-    const filteredScores = selectedProgram === 'All Programs' 
-      ? scores 
+    const filteredScores = selectedProgram === 'All Programs'
+      ? scores.filter(s => matchesProgramFilter((s as any).program_title || ''))
       : scores.filter(s => {
           const pt = normalize((s as any).program_title || '');
           const p = normalize(s.program || '');
@@ -218,7 +224,7 @@ const ImpactDashboard: React.FC<ImpactDashboardProps> = ({ programTypeFilter }) 
     if (!hasImpactData) {
         // Filter baseline data by program
         const filteredBaseline = selectedProgram === 'All Programs'
-            ? baselineData
+            ? baselineData.filter(b => matchesProgramFilter((b as any).program_title || ''))
             : baselineData.filter(b => {
                  const bPt = normalize((b as any).program_title || '');
                  const bCoh = normalize(b.cohort);

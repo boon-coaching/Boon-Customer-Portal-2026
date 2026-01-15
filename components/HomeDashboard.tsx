@@ -308,29 +308,42 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({ programTypeFilter }) => {
     const isAll = selectedCohort === 'All Cohorts';
     const normalize = (str: string) => (str || '').toLowerCase().trim();
     const selNorm = normalize(selectedCohort);
-    
+
+    // Helper to check if a program matches the programTypeFilter
+    const matchesProgramFilter = (programTitle: string) => {
+      if (!programTypeFilter) return true;
+      return programTitle?.toUpperCase().includes(programTypeFilter);
+    };
+
     // 1. Filter sessions to the selected cohort - use ONLY program_title for accurate filtering
+    // When "All Cohorts" and programTypeFilter is set, filter to only matching program type
     const cohortSessions = sessions.filter(s => {
-        if (isAll) return true;
-        const pTitle = normalize((s as any).program_title || '');
-        return pTitle === selNorm;
+        const pTitle = (s as any).program_title || '';
+        if (isAll) {
+          return matchesProgramFilter(pTitle);
+        }
+        return normalize(pTitle) === selNorm;
     });
 
     // 2. Get total employees from roster - use program_title or coaching_program
     const enrolledEmployees = employees.filter(e => {
-        if (isAll) return true;
-        const pt = normalize((e as any).program_title || (e as any).coaching_program || '');
-        return pt === selNorm;
+        const pt = (e as any).program_title || (e as any).coaching_program || '';
+        if (isAll) {
+          return matchesProgramFilter(pt);
+        }
+        return normalize(pt) === selNorm;
     });
-    
+
     // Total employees from roster (this is the denominator for utilization)
     const totalEmployeesCount = enrolledEmployees.length;
-    
+
     // 3. Filter welcome surveys for this cohort
     const cohortWelcomeSurveys = welcomeSurveys.filter(ws => {
-        if (isAll) return true;
-        const wsPt = normalize(ws.program_title || '');
-        return wsPt === selNorm;
+        const wsPt = ws.program_title || '';
+        if (isAll) {
+          return matchesProgramFilter(wsPt);
+        }
+        return normalize(wsPt) === selNorm;
     });
     
     // Utilization = welcome survey completions / total employees in roster
@@ -361,9 +374,11 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({ programTypeFilter }) => {
 
     // Filter competencies - use ONLY program_title
     const cohortCompetencies = competencies.filter(c => {
-        if (isAll) return true;
-        const pt = normalize((c as any).program_title || '');
-        return pt === selNorm;
+        const pt = (c as any).program_title || '';
+        if (isAll) {
+          return matchesProgramFilter(pt);
+        }
+        return normalize(pt) === selNorm;
     });
 
     // Determine if Cohort is Completed - count only participants with BOTH pre AND post scores
@@ -373,10 +388,13 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({ programTypeFilter }) => {
     // Also check for end_of_program surveys as an indicator of completion
     const endOfProgramSurveys = surveys.filter(s => {
         if ((s as any).survey_type !== 'end_of_program') return false;
-        if (isAll) return true;
-        const surveyProgram = normalize((s as any).program_title || '');
+        const surveyProgram = (s as any).program_title || '';
+        if (isAll) {
+          return matchesProgramFilter(surveyProgram);
+        }
+        const surveyProgramNorm = normalize(surveyProgram);
         // Match by program_title or account_name
-        if (surveyProgram && surveyProgram === selNorm) return true;
+        if (surveyProgramNorm && surveyProgramNorm === selNorm) return true;
         const surveyAccount = normalize((s as any).account_name || '');
         if (surveyAccount && surveyAccount === selNorm) return true;
         return false;
@@ -440,16 +458,19 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({ programTypeFilter }) => {
     );
 
     const cohortSurveys = surveys.filter(s => {
-        // For "All Cohorts", include all surveys
-        if (isAll) return true;
+        const surveyProgram = (s as any).program_title || '';
+        // For "All Cohorts", filter by programTypeFilter if set
+        if (isAll) {
+          return matchesProgramFilter(surveyProgram);
+        }
 
         // First try to match by program_title (works for first_session surveys without email)
-        const surveyProgram = normalize((s as any).program_title || '');
-        if (surveyProgram && surveyProgram === selNorm) return true;
-        
+        const surveyProgramNorm = normalize(surveyProgram);
+        if (surveyProgramNorm && surveyProgramNorm === selNorm) return true;
+
         // Fallback to email matching if no program_title match
         if (!s.email) return false; // Only require email for fallback matching
-        if (employees.length === 0) return true; 
+        if (employees.length === 0) return true;
         if (enrolledEmployees.length < totalEmployeesCount) {
              // Check if email belongs to this cohort's employees
              return validEmails.has(s.email.toLowerCase());
@@ -469,21 +490,26 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({ programTypeFilter }) => {
         ? (satScores.reduce((a,b) => a+b, 0) / satScores.length).toFixed(1) 
         : null;
 
-    
+
     const cohortBaseline = baselineData.filter(b => {
-        if (isAll) return true;
-        const bPt = normalize((b as any).program_title || '');
+        const bPt = (b as any).program_title || '';
+        if (isAll) {
+          return matchesProgramFilter(bPt);
+        }
+        const bPtNorm = normalize(bPt);
         const bCoh = normalize(b.cohort);
         const bComp = normalize(b.company);
         // Fix: Only check selNorm.includes(bCoh) if bCoh is non-empty
-        return bPt === selNorm || bCoh === selNorm || bComp === selNorm || (bCoh && selNorm.includes(bCoh));
+        return bPtNorm === selNorm || bCoh === selNorm || bComp === selNorm || (bCoh && selNorm.includes(bCoh));
     });
 
     // Filter focus areas by cohort using the new focus_area_selections table
     const cohortFocusAreas = focusAreas.filter(f => {
-        if (isAll) return true;
-        const fPt = normalize(f.program_title || '');
-        return fPt === selNorm;
+        const fPt = f.program_title || '';
+        if (isAll) {
+          return matchesProgramFilter(fPt);
+        }
+        return normalize(fPt) === selNorm;
     });
 
     // Calculate focus area counts from the new normalized table
@@ -763,7 +789,7 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({ programTypeFilter }) => {
         programStartDate,
         programEndDate
     };
-  }, [sessions, competencies, surveys, employees, welcomeSurveys, baselineData, focusAreas, selectedCohort, programConfig, companyName]);
+  }, [sessions, competencies, surveys, employees, welcomeSurveys, baselineData, focusAreas, selectedCohort, programConfig, companyName, programTypeFilter]);
 
   if (loading) {
     return (

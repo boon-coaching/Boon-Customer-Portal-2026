@@ -199,17 +199,23 @@ const ScaleDashboard: React.FC<ScaleDashboardProps> = ({ programTypeFilter }) =>
         .trim()
     );
 
-    // Filter by program if selected
-    const programFilteredSessions = selectedProgram === 'All Programs' 
-      ? sessions 
+    // Helper to check if a program matches the programTypeFilter
+    const matchesProgramFilter = (programTitle: string) => {
+      if (!programTypeFilter) return true;
+      return programTitle?.toUpperCase().includes(programTypeFilter);
+    };
+
+    // Filter by program if selected, and by programTypeFilter for "All Programs"
+    const programFilteredSessions = selectedProgram === 'All Programs'
+      ? sessions.filter(s => matchesProgramFilter((s as any).program_title || ''))
       : sessions.filter(s => (s as any).program_title === selectedProgram);
 
     const programFilteredEmployees = selectedProgram === 'All Programs'
-      ? employees
+      ? employees.filter(e => matchesProgramFilter((e as any).program_title || (e as any).coaching_program || ''))
       : employees.filter(e => (e as any).program_title === selectedProgram || (e as any).coaching_program === selectedProgram);
 
     const programFilteredWelcomeSurveys = selectedProgram === 'All Programs'
-      ? welcomeSurveys
+      ? welcomeSurveys.filter(w => matchesProgramFilter(w.program_title || ''))
       : welcomeSurveys.filter(w => w.program_title === selectedProgram);
 
     const eligibleEmployees = programFilteredEmployees.filter(e => 
@@ -454,7 +460,7 @@ const ScaleDashboard: React.FC<ScaleDashboardProps> = ({ programTypeFilter }) =>
         .flatMap(s => [(s as any).feedback_suggestions, (s as any).feedback_coach_description])
         .filter(f => f && typeof f === 'string' && f.length > 20)
     };
-  }, [sessions, surveys, employees, welcomeSurveys, windowDays, companyName, loading, selectedProgram]);
+  }, [sessions, surveys, employees, welcomeSurveys, windowDays, companyName, loading, selectedProgram, programTypeFilter]);
 
   // Prepare data for AI Insights
   const aiInsightsData = useMemo(() => {
