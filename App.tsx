@@ -67,11 +67,12 @@ interface CompanyOverride {
   programType: 'GROW' | 'Scale';
   employeeCount?: number;
   company_id?: string;
+  hasBothTypes?: boolean;  // True if company has both GROW and SCALE programs
 }
 
 const AdminCompanySwitcher: React.FC<{
   currentCompany: string;
-  onCompanyChange: (company: string, programType: 'GROW' | 'Scale') => void;
+  onCompanyChange: (company: string, programType: 'GROW' | 'Scale', hasBothTypes?: boolean) => void;
 }> = ({ currentCompany, onCompanyChange }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [companies, setCompanies] = useState<CompanyOverride[]>([]);
@@ -108,29 +109,41 @@ const AdminCompanySwitcher: React.FC<{
 
       if (allData.length > 0) {
         // Get unique account_names with their program type, employee count, and company_id
-        const uniqueMap = new Map<string, { programType: 'GROW' | 'Scale', count: number, company_id?: string }>();
+        // Track both hasGrow and hasScale to detect mixed companies
+        const uniqueMap = new Map<string, { hasGrow: boolean, hasScale: boolean, count: number, company_id?: string }>();
         allData.forEach(row => {
           if (row.account_name) {
+            const isScale = row.program_title?.toUpperCase().includes('SCALE') ||
+                           row.account_name?.toUpperCase().includes('SCALE');
+            const isGrow = row.program_title?.toUpperCase().includes('GROW');
+
             const existing = uniqueMap.get(row.account_name);
             if (existing) {
               existing.count++;
+              if (isScale) existing.hasScale = true;
+              if (isGrow) existing.hasGrow = true;
               // Keep the company_id if we found one
               if (row.company_id && !existing.company_id) {
                 existing.company_id = row.company_id;
               }
             } else {
-              const isScale = row.program_title?.toUpperCase().includes('SCALE') ||
-                             row.account_name?.toUpperCase().includes('SCALE');
-              uniqueMap.set(row.account_name, { programType: isScale ? 'Scale' : 'GROW', count: 1, company_id: row.company_id });
+              uniqueMap.set(row.account_name, {
+                hasGrow: isGrow || !isScale,  // Default to GROW if not explicitly Scale
+                hasScale: isScale,
+                count: 1,
+                company_id: row.company_id
+              });
             }
           }
         });
 
         const companyList = Array.from(uniqueMap.entries()).map(([account_name, data]) => ({
           account_name,
-          programType: data.programType,
+          // If has both, default to Scale for UI display but flag it
+          programType: data.hasScale ? 'Scale' as const : 'GROW' as const,
           employeeCount: data.count,
-          company_id: data.company_id
+          company_id: data.company_id,
+          hasBothTypes: data.hasGrow && data.hasScale
         }));
         // Sort by employee count (most to least)
         setCompanies(companyList.sort((a, b) => b.employeeCount - a.employeeCount));
@@ -145,7 +158,7 @@ const AdminCompanySwitcher: React.FC<{
 
   const handleSelect = (company: CompanyOverride) => {
     localStorage.setItem(ADMIN_COMPANY_KEY, JSON.stringify(company));
-    onCompanyChange(company.account_name, company.programType);
+    onCompanyChange(company.account_name, company.programType, company.hasBothTypes);
     setIsOpen(false);
     setSearchTerm('');
   };
@@ -222,6 +235,7 @@ const MainPortalLayout: React.FC = () => {
   // Program Type State
   const [programType, setProgramType] = useState<'GROW' | 'Scale' | 'Exec' | null>(null);
   const [programTypeLoading, setProgramTypeLoading] = useState(true);
+  const [hasBothProgramTypes, setHasBothProgramTypes] = useState(false);  // For companies with both GROW and SCALE
   
   // Show Setup tab only during onboarding (before launch_date)
   const [showSetup, setShowSetup] = useState(false);
@@ -242,9 +256,10 @@ const MainPortalLayout: React.FC = () => {
   const [viewMode, setViewMode] = useState<'admin' | 'manager'>('admin');
   const navigate = useNavigate();
 
-  const handleCompanyChange = (newCompany: string, newProgramType: 'GROW' | 'Scale') => {
+  const handleCompanyChange = (newCompany: string, newProgramType: 'GROW' | 'Scale', hasBothTypes?: boolean) => {
     setCompanyName(newCompany);
     setProgramType(newProgramType);
+    setHasBothProgramTypes(hasBothTypes || false);
     window.location.reload();
   };
 
@@ -282,10 +297,14 @@ const MainPortalLayout: React.FC = () => {
               const override = JSON.parse(stored) as CompanyOverride;
               company = override.account_name;
               programTypeFromMeta = override.programType;
+              // Restore hasBothProgramTypes for mixed companies (GROW + SCALE)
+              if (override.hasBothTypes) {
+                setHasBothProgramTypes(true);
+              }
             }
           } catch {}
         }
-        
+
         setCompanyName(company);
 
         // Set Sentry user context for better error tracking
@@ -677,7 +696,7 @@ const MainPortalLayout: React.FC = () => {
             <Route path="/employees" element={<EmployeeDashboard />} />
             <Route path="/impact" element={<ImpactDashboard />} />
             <Route path="/themes" element={<ThemesDashboard />} />
-            <Route path="/baseline" element={isScale ? <ScaleBaselineDashboard /> : <BaselineDashboard />} />
+            <Route path="/baseline" element={isScale && !hasBothProgramTypes ? <ScaleBaselineDashboard /> : <BaselineDashboard />} />
             {/* Redirect /scale to / for Scale users, show Scale for GROW users who manually navigate */}
             <Route path="/scale" element={isScale ? <Navigate to="/" replace /> : <ScaleDashboard />} />
             <Route path="*" element={isScale ? <ScaleDashboard /> : <HomeDashboard />} />
