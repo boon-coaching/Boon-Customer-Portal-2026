@@ -107,6 +107,22 @@ const AdminCompanySwitcher: React.FC<{
         from += pageSize;
       }
 
+      // Also fetch programs table to detect mixed companies (GROW + SCALE)
+      const { data: programsData } = await supabase
+        .from('programs')
+        .select('company_id, program_type');
+
+      // Build a map of company_id -> { hasGrow, hasScale }
+      const programTypesByCompany = new Map<string, { hasGrow: boolean, hasScale: boolean }>();
+      programsData?.forEach((p: any) => {
+        if (p.company_id) {
+          const existing = programTypesByCompany.get(p.company_id) || { hasGrow: false, hasScale: false };
+          if (p.program_type?.toUpperCase() === 'GROW') existing.hasGrow = true;
+          if (p.program_type?.toUpperCase() === 'SCALE') existing.hasScale = true;
+          programTypesByCompany.set(p.company_id, existing);
+        }
+      });
+
       if (allData.length > 0) {
         // Get unique account_names with their program type, employee count, and company_id
         // Track both hasGrow and hasScale to detect mixed companies
@@ -133,6 +149,18 @@ const AdminCompanySwitcher: React.FC<{
                 count: 1,
                 company_id: row.company_id
               });
+            }
+          }
+        });
+
+        // Enhance with programs table data for accurate mixed detection
+        uniqueMap.forEach((value, key) => {
+          if (value.company_id) {
+            const programTypes = programTypesByCompany.get(value.company_id);
+            if (programTypes) {
+              // Override with accurate data from programs table
+              value.hasGrow = programTypes.hasGrow;
+              value.hasScale = programTypes.hasScale;
             }
           }
         });
