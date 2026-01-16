@@ -847,12 +847,16 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
           : '';
 
         const programTitle = (s as any).program_title || '';
+        // Use duration_minutes from session_tracking, fallback to program config or defaults
+        const sessionDuration = (s as any).duration_minutes
+          ? (s as any).duration_minutes.toString()
+          : getSessionDuration(programTitle);
         return [
           (s as any).employee_name || '',
           (s as any).coach_name || '',
           formattedDate,
           programTitle,
-          getSessionDuration(programTitle)
+          sessionDuration
         ];
       });
 
