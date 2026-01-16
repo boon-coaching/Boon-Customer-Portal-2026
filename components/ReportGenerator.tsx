@@ -768,14 +768,9 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
 
       setProgress('Generating CSV...');
 
-      // Filter to only completed sessions for billing
-      const completedSessions = filteredSessions.filter(s =>
-        (s as any).status === 'Completed'
-      );
-
-      // Calculate monthly summary for billing
+      // Calculate monthly summary for billing (all sessions)
       const monthlySummary = new Map<string, number>();
-      completedSessions.forEach(s => {
+      filteredSessions.forEach(s => {
         const sessionDate = (s as any).session_date;
         if (sessionDate) {
           const date = new Date(sessionDate);
@@ -802,9 +797,9 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
       // Monthly Summary section
       const summaryLines = [
         'MONTHLY BILLING SUMMARY',
-        'Month,Completed Sessions',
+        'Month,Total Sessions',
         ...sortedMonths.map(([month, count]) => `${month},${count}`),
-        `Total,${completedSessions.length}`,
+        `Total,${filteredSessions.length}`,
         '',
         'SESSION DETAILS'
       ];
@@ -813,7 +808,6 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
         'Employee Name',
         'Coach Name',
         'Session Date',
-        'Session Status',
         'Program',
         'Duration (min)'
       ];
@@ -832,7 +826,6 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
           (s as any).employee_name || '',
           (s as any).coach_name || '',
           formattedDate,
-          (s as any).status || '',
           (s as any).program_title || '',
           (s as any).duration || '60'
         ];
