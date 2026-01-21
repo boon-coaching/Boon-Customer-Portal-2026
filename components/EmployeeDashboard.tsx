@@ -367,6 +367,7 @@ const EmployeeDashboard: React.FC = () => {
   const handleMergeEmployees = async (keepEmployee: Employee, deleteEmployee: Employee) => {
     try {
       const keepEmployeeName = `${keepEmployee.first_name} ${keepEmployee.last_name}`.trim();
+      const deleteEmployeeEmail = deleteEmployee.company_email || deleteEmployee.email;
 
       // Reassign sessions from the duplicate employee to the kept employee
       const { error: sessionError } = await supabase
@@ -382,26 +383,32 @@ const EmployeeDashboard: React.FC = () => {
         throw new Error('Failed to reassign sessions. Please try again.');
       }
 
-      // Reassign welcome survey scale records
-      const { error: surveyScaleError } = await supabase
+      // Delete welcome survey scale records for the duplicate (by employee_id and email)
+      // Delete by employee_id
+      await supabase
         .from('welcome_survey_scale')
-        .update({ employee_id: keepEmployee.id })
+        .delete()
         .eq('employee_id', deleteEmployee.id);
 
-      if (surveyScaleError) {
-        console.error('Error reassigning welcome survey scale records:', surveyScaleError);
-        throw new Error('Failed to reassign survey records. Please try again.');
+      // Also delete by email in case records are linked by email
+      if (deleteEmployeeEmail) {
+        await supabase
+          .from('welcome_survey_scale')
+          .delete()
+          .eq('email', deleteEmployeeEmail);
       }
 
-      // Reassign welcome survey baseline records
-      const { error: surveyBaselineError } = await supabase
+      // Delete welcome survey baseline records for the duplicate
+      await supabase
         .from('welcome_survey_baseline')
-        .update({ employee_id: keepEmployee.id })
+        .delete()
         .eq('employee_id', deleteEmployee.id);
 
-      if (surveyBaselineError) {
-        console.error('Error reassigning welcome survey baseline records:', surveyBaselineError);
-        throw new Error('Failed to reassign survey records. Please try again.');
+      if (deleteEmployeeEmail) {
+        await supabase
+          .from('welcome_survey_baseline')
+          .delete()
+          .eq('email', deleteEmployeeEmail);
       }
 
       // Now delete the duplicate employee
