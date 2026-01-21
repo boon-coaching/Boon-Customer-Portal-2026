@@ -421,26 +421,29 @@ const MainPortalLayout: React.FC = () => {
         setProgramTypeLoading(false);
 
         // Get program type from JWT app_metadata (no DB query needed - avoids RLS issues)
+        // IMPORTANT: Default to Scale (more restrictive) to prevent GROW session data exposure
         if (programTypeFromMeta) {
-          // Normalize the program type (handle case variations)
           const normalizedType = programTypeFromMeta.toLowerCase();
-          if (normalizedType === 'scale') {
-            setProgramType('Scale');
+          if (normalizedType === 'grow') {
+            // Only show GROW when explicitly set
+            setProgramType('GROW');
           } else if (normalizedType === 'exec') {
             setProgramType('Exec');
           } else {
-            setProgramType('GROW');
+            // Scale is the default for any other value (including 'scale')
+            setProgramType('Scale');
           }
           Sentry.setTag('program_type', programTypeFromMeta);
         } else {
-          // Fallback: check if company name contains Scale
-          if (company.toUpperCase().includes('SCALE')) {
-            setProgramType('Scale');
-            Sentry.setTag('program_type', 'Scale');
-          } else {
-            setProgramType('GROW');
-            Sentry.setTag('program_type', 'GROW');
-          }
+          // No program_type set - default to Scale (safer, no session details exposed)
+          // Log this so we can identify and fix users with missing program_type
+          console.warn('User missing program_type in metadata, defaulting to Scale:', session?.user?.email);
+          Sentry.captureMessage('User missing program_type metadata', {
+            level: 'warning',
+            extra: { email: session?.user?.email, company }
+          });
+          setProgramType('Scale');
+          Sentry.setTag('program_type', 'Scale (default)');
         }
 
         // Fetch program titles for sidebar from sessions data - filtered by company
