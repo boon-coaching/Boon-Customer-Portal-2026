@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { useAnalytics, AnalyticsEvents } from '../lib/useAnalytics';
 import { 
   Users, 
   Calendar, 
@@ -48,6 +49,16 @@ const ManagerDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [showSurveyModal, setShowSurveyModal] = useState<'pre' | 'post' | null>(null);
+  const { track } = useAnalytics();
+  const hasTrackedView = useRef(false);
+
+  // Track dashboard view once on mount
+  useEffect(() => {
+    if (!hasTrackedView.current) {
+      hasTrackedView.current = true;
+      track(AnalyticsEvents.REPORT_VIEWED, { report_type: 'manager_dashboard' });
+    }
+  }, [track]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -265,7 +276,10 @@ const ManagerDashboard: React.FC = () => {
                 <div
                   key={employee.id}
                   className="px-6 py-4 hover:bg-gray-50 transition-colors cursor-pointer"
-                  onClick={() => setSelectedEmployee(employee)}
+                  onClick={() => {
+                    setSelectedEmployee(employee);
+                    track(AnalyticsEvents.EMPLOYEE_VIEWED, { employee_id: employee.id });
+                  }}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">

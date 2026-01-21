@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { isAdminEmail } from '../constants';
 import { supabase } from '../lib/supabaseClient';
+import { useAnalytics, AnalyticsEvents } from '../lib/useAnalytics';
 import {
   getDashboardSessions,
   getSurveyResponses,
@@ -86,6 +87,16 @@ const ScaleDashboard: React.FC<ScaleDashboardProps> = ({ programTypeFilter }) =>
   const [accountName, setAccountName] = useState('');
   const [expandedTheme, setExpandedTheme] = useState<string | null>(null);
   const [programDropdownOpen, setProgramDropdownOpen] = useState(false);
+  const { track } = useAnalytics();
+  const hasTrackedView = useRef(false);
+
+  // Track dashboard view once on mount
+  useEffect(() => {
+    if (!hasTrackedView.current) {
+      hasTrackedView.current = true;
+      track(AnalyticsEvents.DASHBOARD_VIEWED, { dashboard_type: 'scale_home' });
+    }
+  }, [track]);
 
   useEffect(() => {
     const fetchData = async () => {

@@ -1,8 +1,9 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { isAdminEmail } from '../constants';
 import { getDashboardSessions, getProgramConfig, CompanyFilter, buildCompanyFilter } from '../lib/dataFetcher';
 import { SessionWithEmployee, ProgramConfig } from '../types';
 import { supabase } from '../lib/supabaseClient';
+import { useAnalytics, AnalyticsEvents } from '../lib/useAnalytics';
 import { CountUp, AnimatedProgressBar, HoverCard } from './Animations';
 import { 
   Lightbulb, 
@@ -37,6 +38,16 @@ const ThemesDashboard: React.FC<ThemesDashboardProps> = ({ programTypeFilter }) 
   const [error, setError] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState<TimeRange>('12M');
   const [selectedProgram, setSelectedProgram] = useState<string>('All Cohorts');
+  const { track } = useAnalytics();
+  const hasTrackedView = useRef(false);
+
+  // Track report view once on mount
+  useEffect(() => {
+    if (!hasTrackedView.current) {
+      hasTrackedView.current = true;
+      track(AnalyticsEvents.REPORT_VIEWED, { report_type: 'themes' });
+    }
+  }, [track]);
 
   useEffect(() => {
     const fetchSessions = async () => {

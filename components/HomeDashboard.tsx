@@ -1,7 +1,8 @@
 import { isAdminEmail } from '../constants';
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import { useAnalytics, AnalyticsEvents } from '../lib/useAnalytics';
 import { 
   CountUp, 
   CountUpPercentage, 
@@ -64,6 +65,16 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({ programTypeFilter }) => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
+  const { track } = useAnalytics();
+  const hasTrackedView = useRef(false);
+
+  // Track dashboard view once on mount
+  useEffect(() => {
+    if (!hasTrackedView.current) {
+      hasTrackedView.current = true;
+      track(AnalyticsEvents.DASHBOARD_VIEWED, { dashboard_type: 'grow_home' });
+    }
+  }, [track]);
   
   // Data State
   const [sessions, setSessions] = useState<SessionWithEmployee[]>([]);

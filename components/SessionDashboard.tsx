@@ -1,8 +1,9 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { isAdminEmail } from '../constants';
 import { getDashboardSessions, getEmployeeRoster, getSurveyResponses, CompanyFilter, buildCompanyFilter } from '../lib/dataFetcher';
 import { SessionWithEmployee, Employee, SurveyResponse } from '../types';
 import { supabase } from '../lib/supabaseClient';
+import { useAnalytics, AnalyticsEvents } from '../lib/useAnalytics';
 import { 
   Users, 
   Calendar, 
@@ -80,6 +81,16 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
     }
     return new Set();
   });
+  const { track } = useAnalytics();
+  const hasTrackedView = useRef(false);
+
+  // Track report view once on mount
+  useEffect(() => {
+    if (!hasTrackedView.current) {
+      hasTrackedView.current = true;
+      track(AnalyticsEvents.REPORT_VIEWED, { report_type: 'sessions' });
+    }
+  }, [track]);
 
   useEffect(() => {
     let mounted = true;
