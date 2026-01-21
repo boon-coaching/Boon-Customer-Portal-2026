@@ -369,6 +369,8 @@ const EmployeeDashboard: React.FC = () => {
       const keepEmployeeName = `${keepEmployee.first_name} ${keepEmployee.last_name}`.trim();
       const deleteEmployeeEmail = deleteEmployee.company_email || deleteEmployee.email;
 
+      console.log('Merging employees:', { keepEmployee: keepEmployee.id, deleteEmployee: deleteEmployee.id, deleteEmail: deleteEmployeeEmail });
+
       // Reassign sessions from the duplicate employee to the kept employee
       const { error: sessionError } = await supabase
         .from('session_tracking')
@@ -383,32 +385,48 @@ const EmployeeDashboard: React.FC = () => {
         throw new Error('Failed to reassign sessions. Please try again.');
       }
 
-      // Delete welcome survey scale records for the duplicate (by employee_id and email)
-      // Delete by employee_id
-      await supabase
+      // Delete welcome survey scale records for the duplicate
+      // First, set employee_id to NULL to remove the foreign key reference
+      const { error: scaleNullError } = await supabase
         .from('welcome_survey_scale')
-        .delete()
+        .update({ employee_id: null })
         .eq('employee_id', deleteEmployee.id);
 
-      // Also delete by email in case records are linked by email
+      if (scaleNullError) {
+        console.error('Error nullifying welcome_survey_scale employee_id:', scaleNullError);
+      }
+
+      // Also try by email
       if (deleteEmployeeEmail) {
-        await supabase
+        const { error: scaleEmailError } = await supabase
           .from('welcome_survey_scale')
-          .delete()
+          .update({ employee_id: null })
           .eq('email', deleteEmployeeEmail);
+
+        if (scaleEmailError) {
+          console.error('Error nullifying welcome_survey_scale by email:', scaleEmailError);
+        }
       }
 
       // Delete welcome survey baseline records for the duplicate
-      await supabase
+      const { error: baselineNullError } = await supabase
         .from('welcome_survey_baseline')
-        .delete()
+        .update({ employee_id: null })
         .eq('employee_id', deleteEmployee.id);
 
+      if (baselineNullError) {
+        console.error('Error nullifying welcome_survey_baseline employee_id:', baselineNullError);
+      }
+
       if (deleteEmployeeEmail) {
-        await supabase
+        const { error: baselineEmailError } = await supabase
           .from('welcome_survey_baseline')
-          .delete()
+          .update({ employee_id: null })
           .eq('email', deleteEmployeeEmail);
+
+        if (baselineEmailError) {
+          console.error('Error nullifying welcome_survey_baseline by email:', baselineEmailError);
+        }
       }
 
       // Now delete the duplicate employee
