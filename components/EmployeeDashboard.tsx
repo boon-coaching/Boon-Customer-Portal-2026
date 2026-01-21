@@ -366,18 +366,42 @@ const EmployeeDashboard: React.FC = () => {
 
   const handleMergeEmployees = async (keepEmployee: Employee, deleteEmployee: Employee) => {
     try {
-      // First, reassign any sessions from the duplicate employee to the kept employee
-      const { error: reassignError } = await supabase
+      const keepEmployeeName = `${keepEmployee.first_name} ${keepEmployee.last_name}`.trim();
+
+      // Reassign sessions from the duplicate employee to the kept employee
+      const { error: sessionError } = await supabase
         .from('session_tracking')
         .update({
           employee_id: keepEmployee.id,
-          employee_name: `${keepEmployee.first_name} ${keepEmployee.last_name}`.trim()
+          employee_name: keepEmployeeName
         })
         .eq('employee_id', deleteEmployee.id);
 
-      if (reassignError) {
-        console.error('Error reassigning sessions:', reassignError);
+      if (sessionError) {
+        console.error('Error reassigning sessions:', sessionError);
         throw new Error('Failed to reassign sessions. Please try again.');
+      }
+
+      // Reassign welcome survey scale records
+      const { error: surveyScaleError } = await supabase
+        .from('welcome_survey_scale')
+        .update({ employee_id: keepEmployee.id })
+        .eq('employee_id', deleteEmployee.id);
+
+      if (surveyScaleError) {
+        console.error('Error reassigning welcome survey scale records:', surveyScaleError);
+        throw new Error('Failed to reassign survey records. Please try again.');
+      }
+
+      // Reassign welcome survey baseline records
+      const { error: surveyBaselineError } = await supabase
+        .from('welcome_survey_baseline')
+        .update({ employee_id: keepEmployee.id })
+        .eq('employee_id', deleteEmployee.id);
+
+      if (surveyBaselineError) {
+        console.error('Error reassigning welcome survey baseline records:', surveyBaselineError);
+        throw new Error('Failed to reassign survey records. Please try again.');
       }
 
       // Now delete the duplicate employee
