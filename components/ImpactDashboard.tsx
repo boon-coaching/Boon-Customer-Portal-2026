@@ -1,8 +1,9 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { isAdminEmail } from '../constants';
 import { getCompetencyScores, getWelcomeSurveyData, getSurveyResponses, getPrograms, CompanyFilter, buildCompanyFilter, Program } from '../lib/dataFetcher';
 import { CompetencyScore, WelcomeSurveyEntry, SurveyResponse } from '../types';
 import { supabase } from '../lib/supabaseClient';
+import { useAnalytics, AnalyticsEvents } from '../lib/useAnalytics';
 import ExecutiveSignals from './ExecutiveSignals';
 import { AnimatedBarChart, AnimatedProgressBar, CountUp } from './Animations';
 import { BarChart, AlertCircle, Clock, Info, MessageSquareQuote, ChevronDown, ChevronUp } from 'lucide-react';
@@ -77,6 +78,16 @@ const ImpactDashboard: React.FC<ImpactDashboardProps> = ({ programTypeFilter }) 
   const [error, setError] = useState<string | null>(null);
   const [selectedProgram, setSelectedProgram] = useState('All Programs');
   const [expandedTheme, setExpandedTheme] = useState<string | null>(null);
+  const { track } = useAnalytics();
+  const hasTrackedView = useRef(false);
+
+  // Track report view once on mount
+  useEffect(() => {
+    if (!hasTrackedView.current) {
+      hasTrackedView.current = true;
+      track(AnalyticsEvents.REPORT_VIEWED, { report_type: 'impact' });
+    }
+  }, [track]);
 
   useEffect(() => {
     const fetchData = async () => {

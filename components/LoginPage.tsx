@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import { trackEvent, AnalyticsEvents } from '../lib/useAnalytics';
 import { Lock, Mail, Loader2, ArrowRight, ArrowLeft, User } from 'lucide-react';
 
 type ViewMode = 'login' | 'signup' | 'forgot';
@@ -47,6 +48,9 @@ const LoginPage: React.FC = () => {
       if (error) {
         throw error;
       }
+
+      // Track successful login
+      trackEvent(AnalyticsEvents.LOGIN, { method: 'password' });
 
       navigate('/');
     } catch (err: any) {

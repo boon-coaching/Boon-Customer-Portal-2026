@@ -1,8 +1,9 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { isAdminEmail } from '../constants';
 import { getWelcomeSurveyData, getWelcomeSurveyScaleData, getProgramConfig, getFocusAreaSelections, getBaselineCompetencyScores, getEmployeeRoster, getPrograms, CompanyFilter, buildCompanyFilter, Program } from '../lib/dataFetcher';
 import { WelcomeSurveyEntry, ProgramConfig, FocusAreaSelection, CompetencyScoreRecord, Employee } from '../types';
 import { supabase } from '../lib/supabaseClient';
+import { useAnalytics, AnalyticsEvents } from '../lib/useAnalytics';
 import ExecutiveSignals from './ExecutiveSignals';
 import { 
   Users, 
@@ -42,6 +43,16 @@ const BaselineDashboard: React.FC<BaselineDashboardProps> = ({ programTypeFilter
   
   // Mobile accordion state
   const [demographicsOpen, setDemographicsOpen] = useState(false);
+  const { track } = useAnalytics();
+  const hasTrackedView = useRef(false);
+
+  // Track report view once on mount
+  useEffect(() => {
+    if (!hasTrackedView.current) {
+      hasTrackedView.current = true;
+      track(AnalyticsEvents.REPORT_VIEWED, { report_type: 'baseline' });
+    }
+  }, [track]);
 
   useEffect(() => {
     const fetch = async () => {

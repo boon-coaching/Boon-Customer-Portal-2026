@@ -1,6 +1,7 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { isAdminEmail } from '../constants';
 import { supabase } from '../lib/supabaseClient';
+import { useAnalytics, AnalyticsEvents } from '../lib/useAnalytics';
 import { 
   Users, 
   Search, 
@@ -117,6 +118,16 @@ const EmployeeDashboard: React.FC = () => {
   const [dismissedDuplicates, setDismissedDuplicates] = useState<Set<string>>(new Set());
   const [showDuplicateReview, setShowDuplicateReview] = useState(false);
   const [selectedDuplicateGroup, setSelectedDuplicateGroup] = useState<DuplicateGroup | null>(null);
+  const { track } = useAnalytics();
+  const hasTrackedView = useRef(false);
+
+  // Track report view once on mount
+  useEffect(() => {
+    if (!hasTrackedView.current) {
+      hasTrackedView.current = true;
+      track(AnalyticsEvents.REPORT_VIEWED, { report_type: 'employees' });
+    }
+  }, [track]);
 
   // Fetch employees
   useEffect(() => {
@@ -321,6 +332,7 @@ const EmployeeDashboard: React.FC = () => {
   const handleEditEmployee = (employee: Employee) => {
     setSelectedEmployee(employee);
     setModalMode('edit');
+    track(AnalyticsEvents.EMPLOYEE_VIEWED, { employee_id: String(employee.id) });
   };
 
   const handleTerminateEmployee = (employee: Employee) => {

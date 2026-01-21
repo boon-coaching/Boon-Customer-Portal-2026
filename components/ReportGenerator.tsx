@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { isAdminEmail } from '../constants';
 import { supabase } from '../lib/supabaseClient';
 import { getDashboardSessions, getCompetencyScores, getSurveyResponses, getProgramConfig, CompanyFilter, buildCompanyFilter } from '../lib/dataFetcher';
+import { trackEvent, AnalyticsEvents } from '../lib/useAnalytics';
 import { FileDown, Loader2, X, Table } from 'lucide-react';
 import jsPDF from 'jspdf';
 
@@ -692,7 +693,10 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
       // Save
       const fileName = `${companyName?.replace(/\s+/g, '_') || 'Coaching'}_Impact_Report_${new Date().toISOString().split('T')[0]}.pdf`;
       pdf.save(fileName);
-      
+
+      // Track download
+      trackEvent(AnalyticsEvents.REPORT_DOWNLOADED, { report_type: 'impact_pdf', file_name: fileName });
+
       setProgress('');
       setIsOpen(false);
     } catch (err) {
@@ -887,6 +891,9 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+
+      // Track download
+      trackEvent(AnalyticsEvents.REPORT_DOWNLOADED, { report_type: 'session_tracker_csv' });
 
       setProgress('');
       setIsOpen(false);
