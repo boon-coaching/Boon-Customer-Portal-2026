@@ -366,76 +366,25 @@ const EmployeeDashboard: React.FC = () => {
 
   const handleMergeEmployees = async (keepEmployee: Employee, deleteEmployee: Employee) => {
     try {
-      const keepEmployeeName = `${keepEmployee.first_name} ${keepEmployee.last_name}`.trim();
-      const deleteEmployeeEmail = deleteEmployee.company_email || deleteEmployee.email;
+      console.log('Merging employees:', { keep: keepEmployee.id, delete: deleteEmployee.id });
 
-      console.log('Merging employees:', { keepEmployee: keepEmployee.id, deleteEmployee: deleteEmployee.id, deleteEmail: deleteEmployeeEmail });
+      // Use RPC function to merge employees (bypasses RLS)
+      const { data, error: rpcError } = await supabase.rpc('merge_duplicate_employees', {
+        keep_employee_id: keepEmployee.id,
+        delete_employee_id: deleteEmployee.id
+      });
 
-      // Reassign sessions from the duplicate employee to the kept employee
-      const { error: sessionError } = await supabase
-        .from('session_tracking')
-        .update({
-          employee_id: keepEmployee.id,
-          employee_name: keepEmployeeName
-        })
-        .eq('employee_id', deleteEmployee.id);
-
-      if (sessionError) {
-        console.error('Error reassigning sessions:', sessionError);
-        throw new Error('Failed to reassign sessions. Please try again.');
+      if (rpcError) {
+        console.error('RPC error:', rpcError);
+        throw rpcError;
       }
 
-      // Delete welcome survey scale records for the duplicate
-      // First, set employee_id to NULL to remove the foreign key reference
-      const { error: scaleNullError } = await supabase
-        .from('welcome_survey_scale')
-        .update({ employee_id: null })
-        .eq('employee_id', deleteEmployee.id);
-
-      if (scaleNullError) {
-        console.error('Error nullifying welcome_survey_scale employee_id:', scaleNullError);
+      if (data && !data.success) {
+        console.error('Merge failed:', data.error);
+        throw new Error(data.error || 'Failed to merge employees');
       }
 
-      // Also try by email
-      if (deleteEmployeeEmail) {
-        const { error: scaleEmailError } = await supabase
-          .from('welcome_survey_scale')
-          .update({ employee_id: null })
-          .eq('email', deleteEmployeeEmail);
-
-        if (scaleEmailError) {
-          console.error('Error nullifying welcome_survey_scale by email:', scaleEmailError);
-        }
-      }
-
-      // Delete welcome survey baseline records for the duplicate
-      const { error: baselineNullError } = await supabase
-        .from('welcome_survey_baseline')
-        .update({ employee_id: null })
-        .eq('employee_id', deleteEmployee.id);
-
-      if (baselineNullError) {
-        console.error('Error nullifying welcome_survey_baseline employee_id:', baselineNullError);
-      }
-
-      if (deleteEmployeeEmail) {
-        const { error: baselineEmailError } = await supabase
-          .from('welcome_survey_baseline')
-          .update({ employee_id: null })
-          .eq('email', deleteEmployeeEmail);
-
-        if (baselineEmailError) {
-          console.error('Error nullifying welcome_survey_baseline by email:', baselineEmailError);
-        }
-      }
-
-      // Now delete the duplicate employee
-      const { error: deleteError } = await supabase
-        .from('employee_manager')
-        .delete()
-        .eq('id', deleteEmployee.id);
-
-      if (deleteError) throw deleteError;
+      console.log('Merge result:', data);
 
       // Update local state
       setEmployees(employees.filter(e => e.id !== deleteEmployee.id));
