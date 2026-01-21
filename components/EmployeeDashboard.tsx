@@ -366,13 +366,27 @@ const EmployeeDashboard: React.FC = () => {
 
   const handleMergeEmployees = async (keepEmployee: Employee, deleteEmployee: Employee) => {
     try {
-      // Delete the duplicate
-      const { error } = await supabase
+      // First, reassign any sessions from the duplicate employee to the kept employee
+      const { error: reassignError } = await supabase
+        .from('session_tracking')
+        .update({
+          employee_id: keepEmployee.id,
+          employee_name: `${keepEmployee.first_name} ${keepEmployee.last_name}`.trim()
+        })
+        .eq('employee_id', deleteEmployee.id);
+
+      if (reassignError) {
+        console.error('Error reassigning sessions:', reassignError);
+        throw new Error('Failed to reassign sessions. Please try again.');
+      }
+
+      // Now delete the duplicate employee
+      const { error: deleteError } = await supabase
         .from('employee_manager')
         .delete()
         .eq('id', deleteEmployee.id);
 
-      if (error) throw error;
+      if (deleteError) throw deleteError;
 
       // Update local state
       setEmployees(employees.filter(e => e.id !== deleteEmployee.id));
@@ -380,9 +394,7 @@ const EmployeeDashboard: React.FC = () => {
       setSelectedDuplicateGroup(null);
     } catch (err: any) {
       console.error('Error merging employees:', err);
-      alert(err.message?.includes('foreign key')
-        ? 'Cannot delete this employee because they have associated sessions. Please contact support.'
-        : 'Failed to merge employees. Please try again.');
+      alert(err.message || 'Failed to merge employees. Please try again.');
     }
   };
 
@@ -1682,7 +1694,7 @@ const DuplicateMergeModal = ({
               <p className="text-sm text-amber-800">
                 <strong>Note:</strong> The other record will be permanently deleted.
                 {group.employees.find(e => e.id !== selectedToKeep)?.company_email && (
-                  <> Any sessions associated with <strong>{group.employees.find(e => e.id !== selectedToKeep)?.company_email}</strong> will remain but may need manual cleanup.</>
+                  <> Any sessions associated with <strong>{group.employees.find(e => e.id !== selectedToKeep)?.company_email}</strong> will be automatically reassigned to the kept employee.</>
                 )}
               </p>
             </div>
