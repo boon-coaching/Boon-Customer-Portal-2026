@@ -392,29 +392,43 @@ const MainPortalLayout: React.FC = () => {
           } catch {}
         }
         
-        // If we have a company_id, check program_config for onboarding status
+        // If we have a company_id, check program_config for onboarding status and mixed program types
         // Check ALL programs for this company - show Setup only if ANY are in Onboarding
         if (companyId) {
           const { data: programData } = await supabase
             .from('program_config')
-            .select('program_status')
+            .select('program_status, program_type')
             .eq('company_id', companyId);
-          
+
           // Show Setup only if at least one program is in Onboarding status
           const hasOnboarding = programData?.some(p => p.program_status?.toLowerCase() === 'onboarding');
           if (hasOnboarding) {
             setShowSetup(true);
           }
+
+          // Check if company has both GROW and SCALE programs (for toggle)
+          const hasGrow = programData?.some(p => p.program_type?.toUpperCase() === 'GROW');
+          const hasScale = programData?.some(p => p.program_type?.toUpperCase() === 'SCALE');
+          if (hasGrow && hasScale) {
+            setHasBothProgramTypes(true);
+          }
         } else if (companyBase) {
           // Fallback: check by account_name if no company_id
           const { data: programData } = await supabase
             .from('program_config')
-            .select('program_status')
+            .select('program_status, program_type')
             .ilike('account_name', `%${companyBase}%`);
-          
+
           const hasOnboarding = programData?.some(p => p.program_status?.toLowerCase() === 'onboarding');
           if (hasOnboarding) {
             setShowSetup(true);
+          }
+
+          // Check if company has both GROW and SCALE programs (for toggle)
+          const hasGrow = programData?.some(p => p.program_type?.toUpperCase() === 'GROW');
+          const hasScale = programData?.some(p => p.program_type?.toUpperCase() === 'SCALE');
+          if (hasGrow && hasScale) {
+            setHasBothProgramTypes(true);
           }
         }
 
