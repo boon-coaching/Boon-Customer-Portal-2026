@@ -107,9 +107,9 @@ const AdminCompanySwitcher: React.FC<{
         from += pageSize;
       }
 
-      // Also fetch programs table to detect mixed companies (GROW + SCALE)
+      // Also fetch program_config to detect mixed companies (GROW + SCALE)
       const { data: programsData } = await supabase
-        .from('programs')
+        .from('program_config')
         .select('company_id, program_type');
 
       // Build a map of company_id -> { hasGrow, hasScale }
