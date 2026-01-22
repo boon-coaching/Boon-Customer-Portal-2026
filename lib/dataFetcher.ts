@@ -832,14 +832,15 @@ export interface Program {
 }
 
 /**
- * Fetches all companies from the lookup table.
+ * Fetches all companies from program_config (source of truth).
+ * Returns distinct account names as companies.
  */
 export const getCompanies = async (): Promise<Company[]> => {
   const { data, error } = await supabase
-    .from('companies')
-    .select('*')
-    .eq('is_active', true)
-    .order('name');
+    .from('program_config')
+    .select('company_id, account_name, program_type')
+    .not('account_name', 'is', null)
+    .order('account_name');
 
   if (error) {
     console.error('Error fetching companies:', error);
@@ -847,50 +848,39 @@ export const getCompanies = async (): Promise<Company[]> => {
     return [];
   }
 
-  return data as Company[];
+  // Dedupe by account_name, keep first occurrence
+  const seen = new Set<string>();
+  const companies: Company[] = [];
+
+  for (const row of data || []) {
+    if (row.account_name && !seen.has(row.account_name)) {
+      seen.add(row.account_name);
+      companies.push({
+        id: row.company_id || row.account_name,
+        name: row.account_name,
+        slug: row.account_name.toLowerCase().replace(/\s+/g, '-'),
+        program_type: row.program_type,
+        is_active: true
+      });
+    }
+  }
+
+  return companies;
 };
 
 /**
- * Fetches programs for a specific company from the lookup table.
+ * Fetches programs from program_config (source of truth).
  */
 export const getPrograms = async (companyId?: string, companyName?: string): Promise<Program[]> => {
-  // If filtering by company name, first find matching company IDs
-  if (companyName && !companyId) {
-    const { data: companies } = await supabase
-      .from('companies')
-      .select('id')
-      .ilike('name', `%${companyName}%`);
-
-    if (!companies || companies.length === 0) {
-      console.log('No companies found matching:', companyName);
-      return [];
-    }
-
-    const companyIds = companies.map(c => c.id);
-
-    const { data, error } = await supabase
-      .from('programs')
-      .select('*')
-      .in('company_id', companyIds)
-      .order('name');
-
-    if (error) {
-      console.error('Error fetching programs:', error);
-      Sentry.captureException(error, { tags: { query: 'getPrograms' } });
-      return [];
-    }
-
-    return data as Program[];
-  }
-
-  // Direct company_id filter
   let query = supabase
-    .from('programs')
-    .select('*')
-    .order('name');
+    .from('program_config')
+    .select('id, company_id, account_name, program_type, program_title, salesforce_program_id')
+    .order('account_name');
 
   if (companyId) {
     query = query.eq('company_id', companyId);
+  } else if (companyName) {
+    query = query.ilike('account_name', `%${companyName}%`);
   }
 
   const { data, error } = await query;
@@ -901,19 +891,26 @@ export const getPrograms = async (companyId?: string, companyName?: string): Pro
     return [];
   }
 
-  return data as Program[];
+  // Map program_config to Program interface
+  return (data || []).map(row => ({
+    id: row.id,
+    company_id: row.company_id,
+    name: row.program_title || `${row.account_name} ${row.program_type}`,
+    program_type: row.program_type as 'GROW' | 'SCALE' | 'EXEC' | undefined,
+    salesforce_id: row.salesforce_program_id
+  }));
 };
 
 /**
  * Fetches programs for dropdown by company name.
- * Returns sorted by employee count (requires joining with employee_manager).
+ * Uses program_config as source of truth.
  */
 export const getProgramsForDropdown = async (companyName: string, programType?: 'GROW' | 'SCALE'): Promise<string[]> => {
   let query = supabase
-    .from('programs')
-    .select('name, program_type, companies!inner(name)')
-    .ilike('companies.name', `%${companyName}%`)
-    .order('name');
+    .from('program_config')
+    .select('account_name, program_type, program_title')
+    .ilike('account_name', `%${companyName}%`)
+    .order('account_name');
 
   if (programType) {
     query = query.eq('program_type', programType);
@@ -927,5 +924,5 @@ export const getProgramsForDropdown = async (companyName: string, programType?: 
     return [];
   }
 
-  return data?.map(p => p.name) || [];
+  return (data || []).map(p => p.program_title || `${p.account_name} ${p.program_type}`);
 };
