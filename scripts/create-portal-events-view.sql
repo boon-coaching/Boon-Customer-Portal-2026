@@ -45,9 +45,10 @@ CREATE POLICY "Service role has full access"
 -- =============================================
 -- VIEW: Recent activity by client (last 30 days)
 -- =============================================
-CREATE OR REPLACE VIEW portal_activity_by_client AS
+DROP VIEW IF EXISTS portal_activity_by_client;
+CREATE VIEW portal_activity_by_client AS
 SELECT
-  c.name as client_name,
+  pc.account_name as client_name,
   pe.client_id,
   COUNT(DISTINCT pe.user_id) as unique_users,
   COUNT(*) as total_events,
@@ -57,18 +58,21 @@ SELECT
   COUNT(CASE WHEN pe.event_name = 'report_downloaded' THEN 1 END) as downloads,
   MAX(pe.created_at) as last_active
 FROM portal_events pe
-LEFT JOIN clients c ON pe.client_id = c.id
+LEFT JOIN (
+  SELECT DISTINCT company_id, account_name FROM program_config
+) pc ON pe.client_id = pc.company_id
 WHERE pe.created_at > NOW() - INTERVAL '30 days'
-GROUP BY c.name, pe.client_id
+GROUP BY pc.account_name, pe.client_id
 ORDER BY last_active DESC;
 
 -- =============================================
 -- VIEW: Recent activity by user (last 30 days)
 -- =============================================
-CREATE OR REPLACE VIEW portal_activity_by_user AS
+DROP VIEW IF EXISTS portal_activity_by_user;
+CREATE VIEW portal_activity_by_user AS
 SELECT
   u.email,
-  c.name as client_name,
+  pc.account_name as client_name,
   COUNT(*) as total_events,
   COUNT(CASE WHEN pe.event_name = 'login' THEN 1 END) as logins,
   COUNT(CASE WHEN pe.event_name = 'report_viewed' THEN 1 END) as report_views,
@@ -76,15 +80,18 @@ SELECT
   MAX(pe.created_at) as last_active
 FROM portal_events pe
 LEFT JOIN auth.users u ON pe.user_id = u.id
-LEFT JOIN clients c ON pe.client_id = c.id
+LEFT JOIN (
+  SELECT DISTINCT company_id, account_name FROM program_config
+) pc ON pe.client_id = pc.company_id
 WHERE pe.created_at > NOW() - INTERVAL '30 days'
-GROUP BY u.email, c.name
+GROUP BY u.email, pc.account_name
 ORDER BY last_active DESC;
 
 -- =============================================
 -- VIEW: Event breakdown (last 30 days)
 -- =============================================
-CREATE OR REPLACE VIEW portal_event_summary AS
+DROP VIEW IF EXISTS portal_event_summary;
+CREATE VIEW portal_event_summary AS
 SELECT
   event_name,
   properties->>'report_type' as report_type,
@@ -101,10 +108,10 @@ ORDER BY count DESC;
 -- =============================================
 
 -- Last 50 events
--- SELECT pe.*, u.email, c.name as client_name
+-- SELECT pe.*, u.email, pc.account_name as client_name
 -- FROM portal_events pe
 -- LEFT JOIN auth.users u ON pe.user_id = u.id
--- LEFT JOIN clients c ON pe.client_id = c.id
+-- LEFT JOIN (SELECT DISTINCT company_id, account_name FROM program_config) pc ON pe.client_id = pc.company_id
 -- ORDER BY pe.created_at DESC
 -- LIMIT 50;
 
