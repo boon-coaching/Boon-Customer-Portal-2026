@@ -297,26 +297,36 @@ const AdminActivityDashboard: React.FC = () => {
     setLoadingClientDetails(true);
 
     try {
-      const dateFilter = getDateFilter();
-
-      // Fetch users for this client
-      const filteredUsers = userActivity.filter(u => u.client_id === client.client_id);
+      // Match users by client_id OR client_name (views may not have client_id)
+      const filteredUsers = userActivity.filter(u =>
+        (client.client_id && u.client_id === client.client_id) ||
+        (client.client_name && u.client_name === client.client_name)
+      );
       setClientUsers(filteredUsers);
 
-      // Fetch recent events for this client
-      let eventsQuery = supabase
-        .from('portal_events')
-        .select('*')
-        .eq('client_id', client.client_id)
-        .order('created_at', { ascending: false })
-        .limit(50);
+      // Try to fetch recent events for this client
+      const dateFilter = getDateFilter();
+      let events: PortalEvent[] = [];
 
-      if (dateFilter) {
-        eventsQuery = eventsQuery.gte('created_at', dateFilter);
+      if (client.client_id) {
+        let eventsQuery = supabase
+          .from('portal_events')
+          .select('*')
+          .eq('client_id', client.client_id)
+          .order('created_at', { ascending: false })
+          .limit(50);
+
+        if (dateFilter) {
+          eventsQuery = eventsQuery.gte('created_at', dateFilter);
+        }
+
+        const { data, error } = await eventsQuery;
+        if (!error && data) {
+          events = data;
+        }
       }
 
-      const { data: events } = await eventsQuery;
-      setClientEvents(events || []);
+      setClientEvents(events);
     } catch (err) {
       console.error('Error fetching client details:', err);
     } finally {
