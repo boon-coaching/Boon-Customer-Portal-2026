@@ -1,5 +1,46 @@
--- Portal Events Admin View
--- Run this in Supabase SQL Editor to create views for activity monitoring
+-- Portal Events Table and Admin Views
+-- Run this in Supabase SQL Editor to set up portal tracking
+
+-- =============================================
+-- TABLE: portal_events (core tracking table)
+-- =============================================
+CREATE TABLE IF NOT EXISTS portal_events (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  client_id TEXT,
+  event_name TEXT NOT NULL,
+  properties JSONB DEFAULT '{}',
+  page_path TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Create indexes for common queries
+CREATE INDEX IF NOT EXISTS idx_portal_events_created_at ON portal_events(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_portal_events_client_id ON portal_events(client_id);
+CREATE INDEX IF NOT EXISTS idx_portal_events_user_id ON portal_events(user_id);
+CREATE INDEX IF NOT EXISTS idx_portal_events_event_name ON portal_events(event_name);
+
+-- =============================================
+-- ROW LEVEL SECURITY (RLS)
+-- =============================================
+ALTER TABLE portal_events ENABLE ROW LEVEL SECURITY;
+
+-- Allow authenticated users to insert their own events
+DROP POLICY IF EXISTS "Users can insert their own events" ON portal_events;
+CREATE POLICY "Users can insert their own events"
+  ON portal_events
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (auth.uid() = user_id OR user_id IS NULL);
+
+-- Allow service role full access for admin queries
+DROP POLICY IF EXISTS "Service role has full access" ON portal_events;
+CREATE POLICY "Service role has full access"
+  ON portal_events
+  FOR ALL
+  TO service_role
+  USING (true)
+  WITH CHECK (true);
 
 -- =============================================
 -- VIEW: Recent activity by client (last 30 days)
