@@ -63,11 +63,37 @@ export function useAnalytics() {
   ) => {
     // Fire and forget - never await, never block
     const { userId, clientId } = contextRef.current;
-
-    // Get current page path
     const pagePath = typeof window !== 'undefined' ? window.location.pathname : null;
 
-    // Insert event asynchronously
+    // If context not yet initialized, fetch session before inserting
+    if (!userId) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        const user_id = session?.user?.id || null;
+        const client_id = session?.user?.app_metadata?.company_id || null;
+
+        supabase
+          .from('portal_events')
+          .insert({
+            user_id,
+            client_id,
+            event_name: eventName,
+            properties,
+            page_path: pagePath,
+          })
+          .then(({ error }) => {
+            if (error && process.env.NODE_ENV === 'development') {
+              console.warn('[Analytics] Failed to track event:', eventName, error.message);
+            }
+          });
+      }).catch((err) => {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[Analytics] Failed to track event:', eventName, err);
+        }
+      });
+      return;
+    }
+
+    // Context exists, insert directly
     supabase
       .from('portal_events')
       .insert({
