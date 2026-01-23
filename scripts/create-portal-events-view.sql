@@ -45,7 +45,8 @@ CREATE POLICY "Service role has full access"
 -- =============================================
 -- VIEW: Recent activity by client (last 30 days)
 -- =============================================
-CREATE OR REPLACE VIEW portal_activity_by_client AS
+DROP VIEW IF EXISTS portal_activity_by_client;
+CREATE VIEW portal_activity_by_client AS
 SELECT
   pc.account_name as client_name,
   pe.client_id,
@@ -67,7 +68,8 @@ ORDER BY last_active DESC;
 -- =============================================
 -- VIEW: Recent activity by user (last 30 days)
 -- =============================================
-CREATE OR REPLACE VIEW portal_activity_by_user AS
+DROP VIEW IF EXISTS portal_activity_by_user;
+CREATE VIEW portal_activity_by_user AS
 SELECT
   u.email,
   pc.account_name as client_name,
@@ -88,7 +90,8 @@ ORDER BY last_active DESC;
 -- =============================================
 -- VIEW: Event breakdown (last 30 days)
 -- =============================================
-CREATE OR REPLACE VIEW portal_event_summary AS
+DROP VIEW IF EXISTS portal_event_summary;
+CREATE VIEW portal_event_summary AS
 SELECT
   event_name,
   properties->>'report_type' as report_type,
