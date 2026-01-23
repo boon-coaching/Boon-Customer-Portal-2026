@@ -87,134 +87,172 @@ const AdminActivityDashboard: React.FC = () => {
   const fetchData = async () => {
     try {
       const dateFilter = getDateFilter();
+      const days = dateRange === 'all' ? null : parseInt(dateRange);
 
-      // Query portal_events directly for flexible date filtering
-      let eventsQuery = supabase
-        .from('portal_events')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Try querying the views first (they have proper permissions)
+      const [clientRes, userRes, eventRes] = await Promise.all([
+        supabase.from('portal_activity_by_client').select('*').limit(100),
+        supabase.from('portal_activity_by_user').select('*').limit(200),
+        supabase.from('portal_event_summary').select('*').limit(100),
+      ]);
 
-      if (dateFilter) {
-        eventsQuery = eventsQuery.gte('created_at', dateFilter);
+      // Check for errors
+      if (clientRes.error) {
+        console.error('Error fetching client activity:', clientRes.error);
+      }
+      if (userRes.error) {
+        console.error('Error fetching user activity:', userRes.error);
+      }
+      if (eventRes.error) {
+        console.error('Error fetching event summary:', eventRes.error);
       }
 
-      const { data: events, error } = await eventsQuery.limit(10000);
+      let clients = clientRes.data || [];
+      let users = (userRes.data || []).map((u: any) => ({ ...u, client_id: u.client_id || null }));
+      let events = eventRes.data || [];
 
-      if (error) {
-        console.error('Error fetching events:', error);
-        return;
+      // If we have a date filter other than 30 days, filter the results client-side
+      // (views are 30-day, so we filter down for 7 days, or show as-is for 30/90/all)
+      if (days && days < 30) {
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - days);
+
+        clients = clients.filter((c: ClientActivity) =>
+          c.last_active && new Date(c.last_active) >= cutoff
+        );
+        users = users.filter((u: UserActivity) =>
+          u.last_active && new Date(u.last_active) >= cutoff
+        );
       }
 
-      if (!events) return;
+      // For 90 days or all time, try to get more data from portal_events directly
+      if (days === null || days > 30) {
+        const eventsQuery = supabase
+          .from('portal_events')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-      // Aggregate client activity
-      const clientMap = new Map<string, ClientActivity>();
-      const userMap = new Map<string, UserActivity>();
-      const eventMap = new Map<string, EventSummary>();
-
-      for (const event of events) {
-        const clientKey = event.client_id || 'unknown';
-        const userKey = event.user_id || 'unknown';
-        const eventKey = `${event.event_name}|${event.properties?.report_type || ''}`;
-
-        // Client aggregation
-        if (!clientMap.has(clientKey)) {
-          clientMap.set(clientKey, {
-            client_id: event.client_id,
-            client_name: event.properties?.client_name || null,
-            unique_users: 0,
-            total_events: 0,
-            logins: 0,
-            dashboard_views: 0,
-            report_views: 0,
-            downloads: 0,
-            last_active: event.created_at,
-          });
-        }
-        const client = clientMap.get(clientKey)!;
-        client.total_events++;
-        if (event.event_name === 'login') client.logins++;
-        if (event.event_name === 'dashboard_viewed') client.dashboard_views++;
-        if (event.event_name === 'report_viewed') client.report_views++;
-        if (event.event_name === 'report_downloaded') client.downloads++;
-        if (new Date(event.created_at) > new Date(client.last_active || 0)) {
-          client.last_active = event.created_at;
+        if (dateFilter) {
+          eventsQuery.gte('created_at', dateFilter);
         }
 
-        // User aggregation
-        if (!userMap.has(userKey)) {
-          userMap.set(userKey, {
-            email: event.properties?.email || null,
-            client_name: event.properties?.client_name || null,
-            client_id: event.client_id,
-            total_events: 0,
-            logins: 0,
-            report_views: 0,
-            downloads: 0,
-            last_active: event.created_at,
-          });
-        }
-        const user = userMap.get(userKey)!;
-        user.total_events++;
-        if (event.event_name === 'login') user.logins++;
-        if (event.event_name === 'report_viewed') user.report_views++;
-        if (event.event_name === 'report_downloaded') user.downloads++;
-        if (new Date(event.created_at) > new Date(user.last_active || 0)) {
-          user.last_active = event.created_at;
-        }
+        const { data: rawEvents, error: rawError } = await eventsQuery.limit(10000);
 
-        // Event aggregation
-        if (!eventMap.has(eventKey)) {
-          eventMap.set(eventKey, {
-            event_name: event.event_name,
-            report_type: event.properties?.report_type || null,
-            count: 0,
-            unique_users: 0,
-            unique_clients: 0,
-          });
+        if (!rawError && rawEvents && rawEvents.length > 0) {
+          // Aggregate from raw events
+          const clientMap = new Map<string, ClientActivity>();
+          const userMap = new Map<string, UserActivity>();
+          const eventMap = new Map<string, EventSummary>();
+
+          for (const event of rawEvents) {
+            const clientKey = event.client_id || 'unknown';
+            const userKey = event.user_id || 'unknown';
+            const eventKey = `${event.event_name}|${event.properties?.report_type || ''}`;
+
+            // Client aggregation
+            if (!clientMap.has(clientKey)) {
+              clientMap.set(clientKey, {
+                client_id: event.client_id,
+                client_name: event.properties?.client_name || null,
+                unique_users: 0,
+                total_events: 0,
+                logins: 0,
+                dashboard_views: 0,
+                report_views: 0,
+                downloads: 0,
+                last_active: event.created_at,
+              });
+            }
+            const client = clientMap.get(clientKey)!;
+            client.total_events++;
+            if (event.event_name === 'login') client.logins++;
+            if (event.event_name === 'dashboard_viewed') client.dashboard_views++;
+            if (event.event_name === 'report_viewed') client.report_views++;
+            if (event.event_name === 'report_downloaded') client.downloads++;
+            if (new Date(event.created_at) > new Date(client.last_active || 0)) {
+              client.last_active = event.created_at;
+            }
+
+            // User aggregation
+            if (!userMap.has(userKey)) {
+              userMap.set(userKey, {
+                email: event.properties?.email || null,
+                client_name: event.properties?.client_name || null,
+                client_id: event.client_id,
+                total_events: 0,
+                logins: 0,
+                report_views: 0,
+                downloads: 0,
+                last_active: event.created_at,
+              });
+            }
+            const user = userMap.get(userKey)!;
+            user.total_events++;
+            if (event.event_name === 'login') user.logins++;
+            if (event.event_name === 'report_viewed') user.report_views++;
+            if (event.event_name === 'report_downloaded') user.downloads++;
+            if (new Date(event.created_at) > new Date(user.last_active || 0)) {
+              user.last_active = event.created_at;
+            }
+
+            // Event aggregation
+            if (!eventMap.has(eventKey)) {
+              eventMap.set(eventKey, {
+                event_name: event.event_name,
+                report_type: event.properties?.report_type || null,
+                count: 0,
+                unique_users: 0,
+                unique_clients: 0,
+              });
+            }
+            eventMap.get(eventKey)!.count++;
+          }
+
+          // Calculate unique users per client
+          const usersByClient = new Map<string, Set<string>>();
+          for (const event of rawEvents) {
+            const clientKey = event.client_id || 'unknown';
+            if (!usersByClient.has(clientKey)) {
+              usersByClient.set(clientKey, new Set());
+            }
+            if (event.user_id) {
+              usersByClient.get(clientKey)!.add(event.user_id);
+            }
+          }
+          for (const [clientKey, usersSet] of usersByClient) {
+            const client = clientMap.get(clientKey);
+            if (client) client.unique_users = usersSet.size;
+          }
+
+          // Calculate unique users/clients per event type
+          const usersPerEvent = new Map<string, Set<string>>();
+          const clientsPerEvent = new Map<string, Set<string>>();
+          for (const event of rawEvents) {
+            const eventKey = `${event.event_name}|${event.properties?.report_type || ''}`;
+            if (!usersPerEvent.has(eventKey)) {
+              usersPerEvent.set(eventKey, new Set());
+              clientsPerEvent.set(eventKey, new Set());
+            }
+            if (event.user_id) usersPerEvent.get(eventKey)!.add(event.user_id);
+            if (event.client_id) clientsPerEvent.get(eventKey)!.add(event.client_id);
+          }
+          for (const [eventKey, usersSet] of usersPerEvent) {
+            const eventData = eventMap.get(eventKey);
+            if (eventData) {
+              eventData.unique_users = usersSet.size;
+              eventData.unique_clients = clientsPerEvent.get(eventKey)?.size || 0;
+            }
+          }
+
+          clients = Array.from(clientMap.values()).filter(c => c.client_id);
+          users = Array.from(userMap.values()).filter(u => u.email || u.total_events > 0);
+          events = Array.from(eventMap.values());
         }
-        eventMap.get(eventKey)!.count++;
       }
 
-      // Calculate unique users per client
-      const usersByClient = new Map<string, Set<string>>();
-      for (const event of events) {
-        const clientKey = event.client_id || 'unknown';
-        if (!usersByClient.has(clientKey)) {
-          usersByClient.set(clientKey, new Set());
-        }
-        if (event.user_id) {
-          usersByClient.get(clientKey)!.add(event.user_id);
-        }
-      }
-      for (const [clientKey, users] of usersByClient) {
-        const client = clientMap.get(clientKey);
-        if (client) client.unique_users = users.size;
-      }
-
-      // Calculate unique users/clients per event type
-      const usersPerEvent = new Map<string, Set<string>>();
-      const clientsPerEvent = new Map<string, Set<string>>();
-      for (const event of events) {
-        const eventKey = `${event.event_name}|${event.properties?.report_type || ''}`;
-        if (!usersPerEvent.has(eventKey)) {
-          usersPerEvent.set(eventKey, new Set());
-          clientsPerEvent.set(eventKey, new Set());
-        }
-        if (event.user_id) usersPerEvent.get(eventKey)!.add(event.user_id);
-        if (event.client_id) clientsPerEvent.get(eventKey)!.add(event.client_id);
-      }
-      for (const [eventKey, users] of usersPerEvent) {
-        const eventData = eventMap.get(eventKey);
-        if (eventData) {
-          eventData.unique_users = users.size;
-          eventData.unique_clients = clientsPerEvent.get(eventKey)?.size || 0;
-        }
-      }
-
-      setClientActivity(Array.from(clientMap.values()).filter(c => c.client_id));
-      setUserActivity(Array.from(userMap.values()).filter(u => u.email || u.total_events > 0));
-      setEventSummary(Array.from(eventMap.values()));
+      setClientActivity(clients);
+      setUserActivity(users);
+      setEventSummary(events);
     } catch (err) {
       console.error('Error fetching activity data:', err);
     }
