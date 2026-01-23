@@ -18,22 +18,24 @@ import ScaleDashboard from './components/ScaleDashboard';
 import ReportGenerator from './components/ReportGenerator';
 import SetupDashboard from './components/SetupDashboard';
 import ManagerDashboard from './components/ManagerDashboard';
+import AdminActivityDashboard from './components/AdminActivityDashboard';
 
-import { 
-  Users, 
-  Settings, 
-  LogOut, 
-  Lightbulb, 
-  Menu, 
-  X, 
-  ChevronDown, 
+import {
+  Users,
+  Settings,
+  LogOut,
+  Lightbulb,
+  Menu,
+  X,
+  ChevronDown,
   Calendar,
   Home,
   TrendingUp,
   ClipboardList,
   Zap,
   Building2,
-  ClipboardCheck
+  ClipboardCheck,
+  Activity
 } from 'lucide-react';
 
 // --- Sentry Initialization ---
@@ -258,7 +260,7 @@ const AdminCompanySwitcher: React.FC<{
 
 // --- Main Portal Layout with Dynamic Program Tabs ---
 const MainPortalLayout: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'setup' | 'dashboard' | 'sessions' | 'employees' | 'impact' | 'themes' | 'baseline'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'setup' | 'dashboard' | 'sessions' | 'employees' | 'impact' | 'themes' | 'baseline' | 'activity'>('dashboard');
   
   // Program Type State
   const [programType, setProgramType] = useState<'GROW' | 'Scale' | 'Exec' | null>(null);
@@ -512,10 +514,10 @@ const MainPortalLayout: React.FC = () => {
 
   const displayCompanyName = companyName.split(' - ')[0] || companyName;
 
-  const handleNavClick = (tab: 'setup' | 'dashboard' | 'sessions' | 'employees' | 'impact' | 'themes' | 'baseline') => {
+  const handleNavClick = (tab: 'setup' | 'dashboard' | 'sessions' | 'employees' | 'impact' | 'themes' | 'baseline' | 'activity') => {
     setActiveTab(tab);
     setMobileMenuOpen(false);
-    navigate(tab === 'dashboard' ? '/' : `/${tab}`);
+    navigate(tab === 'dashboard' ? '/' : tab === 'activity' ? '/admin/activity' : `/${tab}`);
   };
 
   const handleSessionFilterClick = (type: 'program' | 'all', value: string) => {
@@ -742,12 +744,22 @@ const MainPortalLayout: React.FC = () => {
             label="Baseline" 
           />
 
-          <NavItem 
-            active={activeTab === 'employees'} 
+          <NavItem
+            active={activeTab === 'employees'}
             onClick={() => handleNavClick('employees')}
-            icon={<Users size={20} />} 
-            label="Employees" 
+            icon={<Users size={20} />}
+            label="Employees"
           />
+
+          {/* Admin-only: Portal Activity Dashboard */}
+          {isAdmin && (
+            <NavItem
+              active={activeTab === 'activity'}
+              onClick={() => handleNavClick('activity')}
+              icon={<Activity size={20} />}
+              label="Portal Activity"
+            />
+          )}
 
           <div className="pt-4 mt-4 border-t border-gray-100 space-y-2">
             <div className="px-4 py-2">
@@ -791,6 +803,8 @@ const MainPortalLayout: React.FC = () => {
               ? <ScaleBaselineDashboard />
               : <BaselineDashboard programTypeFilter={hasBothProgramTypes ? selectedProgramView?.toUpperCase() : undefined} />
             } />
+            {/* Admin activity dashboard - only accessible to Boon admins */}
+            <Route path="/admin/activity" element={<AdminActivityDashboard />} />
             {/* Redirect /scale to / for Scale users, show Scale for GROW users who manually navigate */}
             <Route path="/scale" element={isScale ? <Navigate to="/" replace /> : <ScaleDashboard />} />
             <Route path="*" element={isScale
