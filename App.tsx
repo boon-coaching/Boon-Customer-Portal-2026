@@ -39,17 +39,21 @@ import {
 } from 'lucide-react';
 
 // --- Sentry Initialization ---
-Sentry.init({
-  dsn: "https://294c2316c823a2c471d7af41681f837c@o4510574332215296.ingest.us.sentry.io/4510574369112064",
-  integrations: [
-    Sentry.browserTracingIntegration(),
-    Sentry.replayIntegration(),
-  ],
-  tracesSampleRate: 1.0,
-  replaysSessionSampleRate: 0.1,
-  replaysOnErrorSampleRate: 1.0,
-  environment: import.meta.env.MODE, // 'development' or 'production'
-});
+// Only initialize Sentry if DSN is configured
+const sentryDsn = import.meta.env.VITE_SENTRY_DSN;
+if (sentryDsn) {
+  Sentry.init({
+    dsn: sentryDsn,
+    integrations: [
+      Sentry.browserTracingIntegration(),
+      Sentry.replayIntegration(),
+    ],
+    tracesSampleRate: 1.0,
+    replaysSessionSampleRate: 0.1,
+    replaysOnErrorSampleRate: 1.0,
+    environment: import.meta.env.MODE, // 'development' or 'production'
+  });
+}
 
 // --- Program Display Name Mapping ---
 const programDisplayNames: Record<string, string> = {
