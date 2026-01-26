@@ -99,16 +99,16 @@ ORDER BY last_active DESC;
 DROP VIEW IF EXISTS portal_event_summary;
 CREATE VIEW portal_event_summary AS
 SELECT
-  event_name,
-  properties->>'report_type' as report_type,
+  pe.event_name,
+  pe.properties->>'report_type' as report_type,
   COUNT(*) as count,
   COUNT(DISTINCT pe.user_id) as unique_users,
-  COUNT(DISTINCT client_id) as unique_clients
+  COUNT(DISTINCT pe.client_id) as unique_clients
 FROM portal_events pe
 LEFT JOIN auth.users u ON pe.user_id = u.id
-WHERE created_at > NOW() - INTERVAL '30 days'
+WHERE pe.created_at > NOW() - INTERVAL '30 days'
   AND (u.email IS NULL OR u.email NOT LIKE '%@boon-health.com')
-GROUP BY event_name, properties->>'report_type'
+GROUP BY pe.event_name, pe.properties->>'report_type'
 ORDER BY count DESC;
 
 -- =============================================
