@@ -71,9 +71,27 @@ interface ScaleDashboardProps {
   programTypeFilter?: string;  // 'SCALE' | 'GROW' - for mixed companies
 }
 
+// Time filter types for Scale dashboard
+type TimeFilter = '30d' | 'ytd' | '1y' | 'py';
+
+// Helper to get display labels for time filters
+const getTimeFilterLabel = (filter: TimeFilter, format: 'short' | 'long' = 'short'): string => {
+  const currentYear = new Date().getFullYear();
+  const priorYear = currentYear - 1;
+
+  const labels: Record<TimeFilter, { short: string; long: string }> = {
+    '30d': { short: 'Last 30 days', long: 'Last 30 days' },
+    'ytd': { short: `${currentYear} YTD`, long: `Year to date (${currentYear})` },
+    '1y': { short: 'Last 13 Months', long: 'Rolling 13 months' },
+    'py': { short: `Full Year ${priorYear}`, long: `Full calendar year ${priorYear}` }
+  };
+
+  return labels[filter][format];
+};
+
 const ScaleDashboard: React.FC<ScaleDashboardProps> = ({ programTypeFilter }) => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const windowDays = parseInt(searchParams.get('windowDays') || '365', 10);
+  const timeFilter = (searchParams.get('timeFilter') || '1y') as TimeFilter;
   const selectedProgram = searchParams.get('program') || 'All Programs';
   
   const [sessions, setSessions] = useState<SessionWithEmployee[]>([]);
@@ -153,12 +171,12 @@ const ScaleDashboard: React.FC<ScaleDashboardProps> = ({ programTypeFilter }) =>
     fetchData();
   }, []);
 
-  const setWindow = (days: number) => {
-    setSearchParams({ windowDays: days.toString(), program: selectedProgram });
+  const setTimeFilter = (filter: TimeFilter) => {
+    setSearchParams({ timeFilter: filter, program: selectedProgram });
   };
 
   const setProgram = (program: string) => {
-    setSearchParams({ windowDays: windowDays.toString(), program });
+    setSearchParams({ timeFilter, program });
     setProgramDropdownOpen(false);
   };
 
@@ -262,16 +280,59 @@ const ScaleDashboard: React.FC<ScaleDashboardProps> = ({ programTypeFilter }) =>
     });
 
     const now = new Date();
-    const windowStart = new Date();
-    windowStart.setDate(now.getDate() - windowDays);
-    
-    const priorWindowStart = new Date();
-    priorWindowStart.setDate(now.getDate() - (windowDays * 2));
 
-    const currentPeriodSessions = completedSessions.filter(s => new Date(s.session_date) >= windowStart);
+    // Calculate date ranges based on time filter
+    const getDateRange = (filter: TimeFilter): { start: Date; end: Date; priorStart: Date; priorEnd: Date } => {
+      const currentYear = now.getFullYear();
+      const priorYear = currentYear - 1;
+
+      switch (filter) {
+        case '30d': {
+          const start = new Date();
+          start.setDate(now.getDate() - 30);
+          const priorStart = new Date();
+          priorStart.setDate(now.getDate() - 60);
+          const priorEnd = new Date();
+          priorEnd.setDate(now.getDate() - 30);
+          return { start, end: now, priorStart, priorEnd };
+        }
+        case 'ytd': {
+          const start = new Date(currentYear, 0, 1); // Jan 1 of current year
+          const priorStart = new Date(priorYear, 0, 1); // Jan 1 of prior year
+          const priorEnd = new Date(priorYear, now.getMonth(), now.getDate()); // Same day last year
+          return { start, end: now, priorStart, priorEnd };
+        }
+        case '1y': {
+          // Rolling 13 months back to enable YoY comparison
+          const start = new Date(priorYear, now.getMonth(), 1); // Same month last year, 1st day
+          const priorStart = new Date(priorYear - 1, now.getMonth(), 1);
+          const priorEnd = new Date(priorYear, now.getMonth(), now.getDate());
+          return { start, end: now, priorStart, priorEnd };
+        }
+        case 'py': {
+          // Prior calendar year (e.g., 2025 if current year is 2026)
+          const start = new Date(priorYear, 0, 1); // Jan 1 of prior year
+          const end = new Date(priorYear, 11, 31); // Dec 31 of prior year
+          const priorStart = new Date(priorYear - 1, 0, 1); // Jan 1 of 2 years ago
+          const priorEnd = new Date(priorYear - 1, 11, 31); // Dec 31 of 2 years ago
+          return { start, end, priorStart, priorEnd };
+        }
+      }
+    };
+
+    const dateRange = getDateRange(timeFilter);
+    const windowStart = dateRange.start;
+    const windowEnd = dateRange.end;
+    const priorWindowStart = dateRange.priorStart;
+    const priorWindowEnd = dateRange.priorEnd;
+
+    const currentPeriodSessions = completedSessions.filter(s => {
+      const d = new Date(s.session_date);
+      return d >= windowStart && d <= windowEnd;
+    });
     const priorPeriodSessions = completedSessions.filter(s => {
       const d = new Date(s.session_date);
-      return d >= priorWindowStart && d < windowStart;
+      return d >= priorWindowStart && d <= priorWindowEnd;
     });
 
     const getUniqueEmployees = (sess: SessionWithEmployee[]) => {
@@ -326,15 +387,36 @@ const ScaleDashboard: React.FC<ScaleDashboardProps> = ({ programTypeFilter }) =>
     };
 
     // Monthly sessions by role for stacked bar chart
-    // Show full months that overlap with the window period
+    // Show full months based on time filter:
+    // - 30d: Last 30 days grouped into current month
+    // - ytd: Jan of current year to current month
+    // - 1y: 13 months (Jan of prior year to current month)
+    // - py: 12 months of prior year (Jan to Dec)
     const monthlySessionsByRole: { month: string; monthLabel: string; roles: Record<string, number>; total: number }[] = [];
-    
+
     const months: Date[] = [];
-    const tempDate = new Date(windowStart);
-    tempDate.setDate(1); // Start of the month containing windowStart
-    while (tempDate <= now) {
-      months.push(new Date(tempDate));
-      tempDate.setMonth(tempDate.getMonth() + 1);
+    const currentYear = now.getFullYear();
+    const priorYear = currentYear - 1;
+
+    if (timeFilter === '30d') {
+      // For 30 days, just show the current month
+      months.push(new Date(now.getFullYear(), now.getMonth(), 1));
+    } else if (timeFilter === 'ytd') {
+      // YTD: Jan of current year to current month
+      for (let m = 0; m <= now.getMonth(); m++) {
+        months.push(new Date(currentYear, m, 1));
+      }
+    } else if (timeFilter === '1y') {
+      // 1 Year: 13 months - same month last year through current month
+      for (let i = 0; i <= 12; i++) {
+        const d = new Date(priorYear, now.getMonth() + i, 1);
+        months.push(d);
+      }
+    } else if (timeFilter === 'py') {
+      // Prior Year: Jan to Dec of prior year
+      for (let m = 0; m < 12; m++) {
+        months.push(new Date(priorYear, m, 1));
+      }
     }
 
     months.forEach(monthStart => {
@@ -471,7 +553,7 @@ const ScaleDashboard: React.FC<ScaleDashboardProps> = ({ programTypeFilter }) =>
         .flatMap(s => [(s as any).feedback_suggestions, (s as any).feedback_coach_description])
         .filter(f => f && typeof f === 'string' && f.length > 20)
     };
-  }, [sessions, surveys, employees, welcomeSurveys, windowDays, companyName, loading, selectedProgram, programTypeFilter]);
+  }, [sessions, surveys, employees, welcomeSurveys, timeFilter, companyName, loading, selectedProgram, programTypeFilter]);
 
   // Prepare data for AI Insights
   const aiInsightsData = useMemo(() => {
@@ -578,13 +660,18 @@ const ScaleDashboard: React.FC<ScaleDashboardProps> = ({ programTypeFilter }) =>
           </div>
 
           <div className="bg-gray-50 p-1 rounded-xl flex items-center border border-gray-100">
-            {[30, 90, 180, 365].map((d) => (
+            {([
+              { key: '30d', label: '30 Days' },
+              { key: 'ytd', label: 'YTD' },
+              { key: '1y', label: '1 Year' },
+              { key: 'py', label: `${new Date().getFullYear() - 1}` }
+            ] as { key: TimeFilter; label: string }[]).map(({ key, label }) => (
               <button
-                key={d}
-                onClick={() => setWindow(d)}
-                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${windowDays === d ? 'bg-boon-dark text-white shadow-sm' : 'text-gray-400 hover:text-boon-dark'}`}
+                key={key}
+                onClick={() => setTimeFilter(key)}
+                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${timeFilter === key ? 'bg-boon-dark text-white shadow-sm' : 'text-gray-400 hover:text-boon-dark'}`}
               >
-                {d === 365 ? '1 Year' : `${d} Days`}
+                {label}
               </button>
             ))}
           </div>
@@ -599,9 +686,9 @@ const ScaleDashboard: React.FC<ScaleDashboardProps> = ({ programTypeFilter }) =>
           trend={m.priorAdoptionRate > 0 ? (m.adoptionRate - m.priorAdoptionRate) : null}
           icon={<Zap className="w-5 h-5 text-boon-blue" />}
         />
-        <HealthCard 
-          title="Sessions" 
-          subtitle={`${windowDays === 365 ? 'Last 12 months' : `Last ${windowDays} days`}`}
+        <HealthCard
+          title="Sessions"
+          subtitle={getTimeFilterLabel(timeFilter)}
           value={m.currentSessionsCount} 
           trend={m.priorSessionsCount > 0 ? ((m.currentSessionsCount - m.priorSessionsCount) / m.priorSessionsCount) * 100 : null}
           icon={<Activity className="w-5 h-5 text-boon-coral" />}
@@ -615,9 +702,9 @@ const ScaleDashboard: React.FC<ScaleDashboardProps> = ({ programTypeFilter }) =>
           trend={null}
           icon={<BarChart3 className="w-5 h-5 text-boon-purple" />}
         />
-        <HealthCard 
-          title="Momentum" 
-          subtitle={`Unique users in ${windowDays === 365 ? '1 year' : `${windowDays} days`}`}
+        <HealthCard
+          title="Momentum"
+          subtitle={`Unique users in period`}
           value={m.mau} 
           trend={m.mauPrior > 0 ? ((m.mau - m.mauPrior) / m.mauPrior) * 100 : null}
           icon={<TrendingUp className="w-5 h-5 text-boon-green" />}
@@ -666,7 +753,7 @@ const ScaleDashboard: React.FC<ScaleDashboardProps> = ({ programTypeFilter }) =>
                   <Briefcase className="w-4 h-4 text-boon-purple" /> Sessions by Role
                </h3>
                <span className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">
-                 {windowDays === 365 ? 'Last 12 Months' : `Last ${windowDays} Days`}
+                 {getTimeFilterLabel(timeFilter)}
                </span>
             </div>
             
@@ -746,7 +833,7 @@ const ScaleDashboard: React.FC<ScaleDashboardProps> = ({ programTypeFilter }) =>
           <div className="bg-gray-50 border border-dashed border-gray-200 p-4 rounded-xl flex items-start gap-3">
              <Info className="w-5 h-5 text-gray-400 shrink-0 mt-0.5" />
              <p className="text-xs text-gray-500 leading-relaxed font-medium">
-               <strong>Utilization Note:</strong> {m.currentSessionsCount} sessions were completed in this {windowDays === 365 ? '1-year' : `${windowDays}-day`} window. 
+               <strong>Utilization Note:</strong> {m.currentSessionsCount} sessions were completed in this period ({getTimeFilterLabel(timeFilter)}). 
                This reflects employee-led demand for growth resources rather than a mandatory curriculum.
              </p>
           </div>
@@ -803,7 +890,7 @@ const ScaleDashboard: React.FC<ScaleDashboardProps> = ({ programTypeFilter }) =>
           companyName={companyName}
           companyId={companyId}
           programType="SCALE"
-          timeWindowDays={windowDays}
+          timeWindowDays={timeFilter === '30d' ? 30 : timeFilter === 'ytd' ? 365 : timeFilter === '1y' ? 395 : 365}
           selectedProgram={selectedProgram}
           totalSessions={aiInsightsData.totalSessions}
           uniqueParticipants={aiInsightsData.uniqueParticipants}

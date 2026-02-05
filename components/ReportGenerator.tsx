@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { isAdminEmail } from '../constants';
 import { supabase } from '../lib/supabaseClient';
 import { getDashboardSessions, getCompetencyScores, getSurveyResponses, getProgramConfig, CompanyFilter, buildCompanyFilter } from '../lib/dataFetcher';
 import { trackEvent, AnalyticsEvents } from '../lib/useAnalytics';
 import { FileDown, Loader2, X, Table } from 'lucide-react';
 import jsPDF from 'jspdf';
+
+// Time filter types matching Scale dashboard
+type TimeFilter = '30d' | 'ytd' | '1y' | 'py';
 
 interface ReportGeneratorProps {
   companyName: string;
@@ -35,17 +39,28 @@ interface ReportData {
   programPeriodLabel: string;
 }
 
-const ReportGenerator: React.FC<ReportGeneratorProps> = ({ 
-  companyName, 
+const ReportGenerator: React.FC<ReportGeneratorProps> = ({
+  companyName,
   clientLogo,
-  programType 
+  programType
 }) => {
+  const [searchParams] = useSearchParams();
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState('');
-  const [dateRange, setDateRange] = useState<'all' | 'q4' | 'q3' | 'ytd'>('all');
+  const [dateRange, setDateRange] = useState<TimeFilter | 'all'>('all');
   const [selectedProgram, setSelectedProgram] = useState<string>('all');
   const [programs, setPrograms] = useState<string[]>([]);
+
+  // Sync with dashboard's time filter for Scale accounts
+  useEffect(() => {
+    if (programType === 'Scale') {
+      const dashboardTimeFilter = searchParams.get('timeFilter') as TimeFilter | null;
+      if (dashboardTimeFilter && ['30d', 'ytd', '1y', 'py'].includes(dashboardTimeFilter)) {
+        setDateRange(dashboardTimeFilter);
+      }
+    }
+  }, [searchParams, programType]);
 
   const handleOpen = async () => {
     setIsOpen(true);
@@ -124,14 +139,23 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
 
     // Calculate date range filter
     const now = new Date();
+    const currentYear = now.getFullYear();
+    const priorYear = currentYear - 1;
     let startDate: Date | null = null;
-    
-    if (dateRange === 'ytd') {
-      startDate = new Date(now.getFullYear(), 0, 1); // Jan 1 of current year
-    } else if (dateRange === 'q4') {
-      startDate = new Date(2024, 9, 1); // Oct 1, 2024
-    } else if (dateRange === 'q3') {
-      startDate = new Date(2024, 6, 1); // Jul 1, 2024
+    let endDate: Date | null = null; // Used for Prior Year filter
+
+    if (dateRange === '30d') {
+      startDate = new Date();
+      startDate.setDate(now.getDate() - 30);
+    } else if (dateRange === 'ytd') {
+      startDate = new Date(currentYear, 0, 1); // Jan 1 of current year
+    } else if (dateRange === '1y') {
+      // Rolling 13 months
+      startDate = new Date(priorYear, now.getMonth(), 1);
+    } else if (dateRange === 'py') {
+      // Prior calendar year
+      startDate = new Date(priorYear, 0, 1); // Jan 1 of prior year
+      endDate = new Date(priorYear, 11, 31); // Dec 31 of prior year
     }
     
     const matchesProgram = (programTitle: string | undefined | null): boolean => {
@@ -144,6 +168,10 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
       if (!startDate) return true; // 'all' time
       if (!dateStr) return false;
       const date = new Date(dateStr);
+      if (endDate) {
+        // For Prior Year filter, check both start and end
+        return date >= startDate && date <= endDate;
+      }
       return date >= startDate;
     };
     
@@ -306,49 +334,64 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
             startDate: (p as any).program_start_date
           }));
         programPeriodLabel = 'All Programs';
+      } else if (dateRange === '30d') {
+        // Last 30 days
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(now.getDate() - 30);
+        programsForPeriod = programsFiltered
+          .filter(p => {
+            const pStartDate = (p as any).program_start_date;
+            if (!pStartDate) return false;
+            return new Date(pStartDate) >= thirtyDaysAgo;
+          })
+          .map(p => ({
+            name: (p as any).program_title || 'Unknown Program',
+            startDate: (p as any).program_start_date
+          }));
+        programPeriodLabel = 'Programs (Last 30 Days)';
       } else if (dateRange === 'ytd') {
-        // Year to date - show 2025 programs only
+        // Year to date - show current year programs only
         programsForPeriod = programsFiltered
           .filter(p => {
-            const startDate = (p as any).program_start_date;
-            if (!startDate) return false;
-            return new Date(startDate).getFullYear() === now.getFullYear();
+            const pStartDate = (p as any).program_start_date;
+            if (!pStartDate) return false;
+            return new Date(pStartDate).getFullYear() === currentYear;
           })
           .map(p => ({
             name: (p as any).program_title || 'Unknown Program',
             startDate: (p as any).program_start_date
           }));
-        programPeriodLabel = `Programs Launched in ${now.getFullYear()}`;
-      } else if (dateRange === 'q4') {
-        // Q4 2024
+        programPeriodLabel = `Programs Launched in ${currentYear}`;
+      } else if (dateRange === '1y') {
+        // Rolling 13 months
+        const thirteenMonthsAgo = new Date(priorYear, now.getMonth(), 1);
         programsForPeriod = programsFiltered
           .filter(p => {
-            const startDate = (p as any).program_start_date;
-            if (!startDate) return false;
-            const d = new Date(startDate);
-            return d.getFullYear() === 2024 && d.getMonth() >= 9; // Oct-Dec
+            const pStartDate = (p as any).program_start_date;
+            if (!pStartDate) return false;
+            return new Date(pStartDate) >= thirteenMonthsAgo;
           })
           .map(p => ({
             name: (p as any).program_title || 'Unknown Program',
             startDate: (p as any).program_start_date
           }));
-        programPeriodLabel = 'Programs Launched in Q4 2024';
-      } else if (dateRange === 'q3') {
-        // Q3 2024
+        programPeriodLabel = 'Programs (Last 13 Months)';
+      } else if (dateRange === 'py') {
+        // Prior calendar year
         programsForPeriod = programsFiltered
           .filter(p => {
-            const startDate = (p as any).program_start_date;
-            if (!startDate) return false;
-            const d = new Date(startDate);
-            return d.getFullYear() === 2024 && d.getMonth() >= 6 && d.getMonth() <= 8; // Jul-Sep
+            const pStartDate = (p as any).program_start_date;
+            if (!pStartDate) return false;
+            const d = new Date(pStartDate);
+            return d.getFullYear() === priorYear;
           })
           .map(p => ({
             name: (p as any).program_title || 'Unknown Program',
             startDate: (p as any).program_start_date
           }));
-        programPeriodLabel = 'Programs Launched in Q3 2024';
+        programPeriodLabel = `Programs Launched in ${priorYear}`;
       }
-      
+
       // Sort by start date
       programsForPeriod.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
     }
@@ -738,14 +781,21 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
 
       // Calculate date range filter
       const now = new Date();
+      const currentYear = now.getFullYear();
+      const priorYear = currentYear - 1;
       let startDate: Date | null = null;
+      let endDate: Date | null = null;
 
-      if (dateRange === 'ytd') {
-        startDate = new Date(now.getFullYear(), 0, 1);
-      } else if (dateRange === 'q4') {
-        startDate = new Date(2024, 9, 1);
-      } else if (dateRange === 'q3') {
-        startDate = new Date(2024, 6, 1);
+      if (dateRange === '30d') {
+        startDate = new Date();
+        startDate.setDate(now.getDate() - 30);
+      } else if (dateRange === 'ytd') {
+        startDate = new Date(currentYear, 0, 1);
+      } else if (dateRange === '1y') {
+        startDate = new Date(priorYear, now.getMonth(), 1);
+      } else if (dateRange === 'py') {
+        startDate = new Date(priorYear, 0, 1);
+        endDate = new Date(priorYear, 11, 31);
       }
 
       // Fetch sessions
@@ -765,6 +815,8 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
         if (startDate && sessionDate) {
           const date = new Date(sessionDate);
           if (date < startDate) return false;
+          // For Prior Year filter, also check end date
+          if (endDate && date > endDate) return false;
         }
 
         return true;
@@ -943,9 +995,10 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 >
                   <option value="all">All Time</option>
-                  <option value="ytd">Year to Date</option>
-                  <option value="q4">Q4 2024</option>
-                  <option value="q3">Q3 2024</option>
+                  <option value="30d">Last 30 Days</option>
+                  <option value="ytd">Year to Date ({new Date().getFullYear()})</option>
+                  <option value="1y">Rolling 13 Months</option>
+                  <option value="py">Full Year {new Date().getFullYear() - 1}</option>
                 </select>
               </div>
               
