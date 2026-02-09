@@ -1,0 +1,928 @@
+import * as Sentry from '@sentry/react';
+import { supabase } from './supabaseClient';
+import {
+  Employee,
+  Session,
+  DashboardStats,
+  SessionWithEmployee,
+  CompetencyScore,
+  SurveyResponse,
+  WelcomeSurveyEntry,
+  ProgramConfig,
+  SurveySubmission,
+  CompetencyPrePost,
+  CompetencyScoreRecord,
+  FocusAreaSelection
+} from '../types';
+
+// ============================================
+// SIMPLE IN-MEMORY CACHE
+// ============================================
+
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+const cache = new Map<string, CacheEntry<any>>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+const getCacheKey = (prefix: string, filter?: any): string => {
+  return `${prefix}:${JSON.stringify(filter || {})}`;
+};
+
+const getFromCache = <T>(key: string): T | null => {
+  const entry = cache.get(key);
+  if (!entry) return null;
+
+  if (Date.now() - entry.timestamp > CACHE_TTL) {
+    cache.delete(key);
+    return null;
+  }
+
+  return entry.data as T;
+};
+
+const setCache = <T>(key: string, data: T): void => {
+  cache.set(key, { data, timestamp: Date.now() });
+};
+
+// Clear cache (useful for forcing refresh)
+export const clearDataCache = (): void => {
+  cache.clear();
+};
+
+// ============================================
+// COMPANY FILTER CONTEXT
+// ============================================
+
+/**
+ * Filter options for company-scoped queries.
+ * 
+ * For single-company accounts (most customers):
+ *   - Use companyId for exact company match
+ * 
+ * For multi-location accounts (e.g., Media Arts Lab):
+ *   - Use companyId to get ALL locations
+ *   - Use accountName to filter to a specific location
+ *   - Use programTitle to filter to a specific program
+ * 
+ * Priority: companyId > accountName (companyId is preferred when both are set)
+ */
+export interface CompanyFilter {
+  companyId?: string;      // UUID - exact company match, gets ALL locations for that company
+  accountName?: string;    // Display name - partial match with ilike for specific location
+  programTitle?: string;   // Optional: filter to specific program within the company
+  companyName?: string;    // Fallback company name for tables with unreliable company_id
+}
+
+// ============================================
+// EMPLOYEE & SESSION QUERIES
+// ============================================
+
+/**
+ * Fetches employees from the 'employee_manager' table, filtered by company.
+ * For multi-location accounts: accountName takes precedence to filter to specific location.
+ */
+export const getEmployeeRoster = async (filter?: CompanyFilter): Promise<Employee[]> => {
+  const cacheKey = getCacheKey('employees', filter);
+  const cached = getFromCache<Employee[]>(cacheKey);
+  if (cached) return cached;
+
+  let query = supabase
+    .from('employee_manager')
+    .select('*')
+    .neq('company_email', 'asimmons@boon-health.com');
+
+  // Apply company filter at query level
+  // For multi-location: accountName takes precedence if set
+  // Note: employee_manager uses 'company_name' not 'account_name'
+  if (filter?.accountName) {
+    query = query.ilike('company_name', `%${filter.accountName}%`);
+  } else if (filter?.companyId) {
+    query = query.eq('company_id', filter.companyId);
+  }
+
+  // Optional program title filter
+  if (filter?.programTitle) {
+    query = query.eq('program_title', filter.programTitle);
+  }
+
+  const { data, error } = await query.order('last_name', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching employees:', error);
+    Sentry.captureException(error, { tags: { query: 'getEmployeeRoster' } });
+    return [];
+  }
+
+  console.log(`Fetched ${data?.length || 0} employees for company filter:`, filter);
+
+  const result = (data || []).map((d: any) => ({
+    ...d,
+    full_name: d.first_name && d.last_name ? `${d.first_name} ${d.last_name}` : d.email,
+    name: d.first_name && d.last_name ? `${d.first_name} ${d.last_name}` : d.email,
+    employee_name: d.first_name && d.last_name ? `${d.first_name} ${d.last_name}` : d.email,
+  })) as Employee[];
+
+  setCache(cacheKey, result);
+  return result;
+};
+
+export const fetchEmployees = getEmployeeRoster;
+
+/**
+ * Fetches sessions from 'session_tracking', filtered by company.
+ * Uses batch fetching to avoid Supabase 1000 row limit.
+ * 
+ * For multi-location accounts: if accountName is provided, it takes precedence
+ * to filter to that specific location even if companyId is also set.
+ */
+export const getDashboardSessions = async (filter?: CompanyFilter): Promise<SessionWithEmployee[]> => {
+  const cacheKey = getCacheKey('sessions', filter);
+  const cached = getFromCache<SessionWithEmployee[]>(cacheKey);
+  if (cached) return cached;
+
+  let allData: any[] = [];
+  let offset = 0;
+  const batchSize = 1000;
+  let hasMore = true;
+
+  while (hasMore) {
+    let query = supabase
+      .from('session_tracking')
+      .select('*');
+
+    // Apply company filter at query level
+    // For multi-location: accountName takes precedence if set (filters to specific location)
+    // For single-company: use companyId for exact match
+    if (filter?.accountName) {
+      // Multi-location account - filter to specific location
+      query = query.ilike('account_name', `%${filter.accountName}%`);
+    } else if (filter?.companyId) {
+      // Single company account - get all data for this company
+      query = query.eq('company_id', filter.companyId);
+    }
+
+    // Optional program title filter
+    if (filter?.programTitle) {
+      query = query.eq('program_title', filter.programTitle);
+    }
+
+    const { data, error } = await query
+      .order('session_date', { ascending: false })
+      .range(offset, offset + batchSize - 1);
+
+    if (error) {
+      console.error('Error fetching sessions:', error);
+      Sentry.captureException(error, { tags: { query: 'getDashboardSessions' } });
+      break;
+    }
+
+    if (data && data.length > 0) {
+      allData = [...allData, ...data];
+      offset += batchSize;
+      hasMore = data.length === batchSize;
+    } else {
+      hasMore = false;
+    }
+  }
+
+  console.log(`Fetched ${allData.length} total sessions for company filter:`, filter);
+  setCache(cacheKey, allData);
+  return allData as SessionWithEmployee[];
+};
+
+export const fetchSessions = async (filter?: CompanyFilter): Promise<Session[]> => {
+    return (await getDashboardSessions(filter)) as unknown as Session[];
+}
+
+// ============================================
+// NEW SCHEMA QUERIES
+// ============================================
+
+/**
+ * Fetches all survey submissions from the unified survey_submissions table.
+ */
+export const getSurveySubmissions = async (surveyType?: 'baseline' | 'end_of_program', filter?: CompanyFilter): Promise<SurveySubmission[]> => {
+  let query = supabase.from('survey_submissions').select('*');
+
+  if (surveyType) {
+    query = query.eq('survey_type', surveyType);
+  }
+
+  // Apply company filter
+  if (filter?.companyId) {
+    query = query.eq('company_id', filter.companyId);
+  } else if (filter?.accountName) {
+    query = query.ilike('account_name', `%${filter.accountName}%`);
+  }
+
+  let { data, error } = await query;
+
+  // Fallback: if company_id returned no results, try accountName or companyName
+  const fallbackName = filter?.accountName || filter?.companyName;
+  if (!error && (!data || data.length === 0) && filter?.companyId && fallbackName) {
+    let fallbackQuery = supabase.from('survey_submissions').select('*');
+    if (surveyType) {
+      fallbackQuery = fallbackQuery.eq('survey_type', surveyType);
+    }
+    fallbackQuery = fallbackQuery.ilike('account_name', `%${fallbackName}%`);
+
+    const fallbackResult = await fallbackQuery;
+    data = fallbackResult.data;
+    error = fallbackResult.error;
+  }
+
+  if (error) {
+    console.error('Error fetching survey submissions:', error);
+    Sentry.captureException(error, { tags: { query: 'getSurveySubmissions', surveyType } });
+    return [];
+  }
+
+  return data as SurveySubmission[];
+};
+
+/**
+ * Fetches competency pre/post comparison data from the view.
+ * This is the primary source for competency growth calculations.
+ */
+export const getCompetencyPrePost = async (filter?: CompanyFilter): Promise<CompetencyPrePost[]> => {
+  let query = supabase
+    .from('competency_pre_post')
+    .select('*');
+
+  // Apply company filter
+  if (filter?.companyId) {
+    query = query.eq('company_id', filter.companyId);
+  } else if (filter?.accountName) {
+    query = query.ilike('account_name', `%${filter.accountName}%`);
+  }
+
+  let { data, error } = await query;
+
+  // Fallback: if company_id returned no results, try accountName or companyName
+  const fallbackName = filter?.accountName || filter?.companyName;
+  if (!error && (!data || data.length === 0) && filter?.companyId && fallbackName) {
+    const fallbackQuery = supabase
+      .from('competency_pre_post')
+      .select('*')
+      .ilike('account_name', `%${fallbackName}%`);
+
+    const fallbackResult = await fallbackQuery;
+    data = fallbackResult.data;
+    error = fallbackResult.error;
+  }
+
+  if (error) {
+    console.error('Error fetching competency pre/post:', error);
+    Sentry.captureException(error, { tags: { query: 'getCompetencyPrePost' } });
+    return [];
+  }
+
+  return data as CompetencyPrePost[];
+};
+
+/**
+ * Fetches focus area selections.
+ */
+export const getFocusAreaSelections = async (filter?: CompanyFilter): Promise<FocusAreaSelection[]> => {
+  let query = supabase
+    .from('focus_area_selections')
+    .select('*')
+    .eq('selected', true);
+
+  // Apply company filter
+  if (filter?.companyId) {
+    query = query.eq('company_id', filter.companyId);
+  } else if (filter?.accountName) {
+    query = query.ilike('account_name', `%${filter.accountName}%`);
+  }
+
+  let { data, error } = await query;
+
+  // Fallback: if company_id returned no results, try accountName or companyName
+  const fallbackName = filter?.accountName || filter?.companyName;
+  if (!error && (!data || data.length === 0) && filter?.companyId && fallbackName) {
+    const fallbackQuery = supabase
+      .from('focus_area_selections')
+      .select('*')
+      .eq('selected', true)
+      .ilike('account_name', `%${fallbackName}%`);
+
+    const fallbackResult = await fallbackQuery;
+    data = fallbackResult.data;
+    error = fallbackResult.error;
+  }
+
+  if (error) {
+    console.error('Error fetching focus area selections:', error);
+    Sentry.captureException(error, { tags: { query: 'getFocusAreaSelections' } });
+    return [];
+  }
+
+  return data as FocusAreaSelection[];
+};
+
+/**
+ * Fetches baseline competency scores from competency_scores table.
+ * Used for baseline dashboard competency averages.
+ */
+export const getBaselineCompetencyScores = async (filter?: CompanyFilter): Promise<CompetencyScoreRecord[]> => {
+  let query = supabase
+    .from('competency_scores')
+    .select('*')
+    .eq('score_type', 'baseline');
+
+  // Apply company filter
+  if (filter?.companyId) {
+    query = query.eq('company_id', filter.companyId);
+  } else if (filter?.accountName) {
+    query = query.ilike('account_name', `%${filter.accountName}%`);
+  }
+
+  let { data, error } = await query;
+
+  // Fallback: if company_id returned no results, try accountName or companyName
+  const fallbackName = filter?.accountName || filter?.companyName;
+  if (!error && (!data || data.length === 0) && filter?.companyId && fallbackName) {
+    const fallbackQuery = supabase
+      .from('competency_scores')
+      .select('*')
+      .eq('score_type', 'baseline')
+      .ilike('account_name', `%${fallbackName}%`);
+
+    const fallbackResult = await fallbackQuery;
+    data = fallbackResult.data;
+    error = fallbackResult.error;
+  }
+
+  if (error) {
+    console.error('Error fetching baseline competency scores:', error);
+    Sentry.captureException(error, { tags: { query: 'getBaselineCompetencyScores' } });
+    return [];
+  }
+
+  return data as CompetencyScoreRecord[];
+};
+
+// ============================================
+// LEGACY-COMPATIBLE QUERIES
+// These fetch from new tables but return data in old format
+// ============================================
+
+/**
+ * Fetches competency scores in legacy format.
+ * Uses competency_pre_post view and maps to CompetencyScore interface.
+ */
+export const getCompetencyScores = async (filter?: CompanyFilter): Promise<CompetencyScore[]> => {
+  let query = supabase
+    .from('competency_pre_post')
+    .select('*');
+
+  // Apply company filter
+  if (filter?.companyId) {
+    query = query.eq('company_id', filter.companyId);
+  } else if (filter?.accountName) {
+    query = query.ilike('account_name', `%${filter.accountName}%`);
+  }
+
+  let { data, error } = await query;
+
+  // Fallback: if company_id returned no results, try accountName or companyName
+  const fallbackName = filter?.accountName || filter?.companyName;
+  if (!error && (!data || data.length === 0) && filter?.companyId && fallbackName) {
+    const fallbackQuery = supabase
+      .from('competency_pre_post')
+      .select('*')
+      .ilike('account_name', `%${fallbackName}%`);
+
+    const fallbackResult = await fallbackQuery;
+    data = fallbackResult.data;
+    error = fallbackResult.error;
+  }
+
+  if (error) {
+    console.error('Error fetching competency scores:', error);
+    Sentry.captureException(error, { tags: { query: 'getCompetencyScores' } });
+    return [];
+  }
+
+  // Map competency_pre_post view to legacy CompetencyScore format
+  return (data || []).map((d: any) => ({
+    email: d.email,
+    program: d.salesforce_program_id || '',
+    competency: d.competency_name,
+    pre: d.pre_score !== null && d.pre_score !== undefined ? Number(d.pre_score) : 0,
+    post: d.post_score !== null && d.post_score !== undefined ? Number(d.post_score) : 0,
+    program_title: d.program_title,
+    account_name: d.account_name,
+    company_id: d.company_id,
+    // Note: feedback fields need to come from survey_submissions if needed
+  })) as CompetencyScore[];
+};
+
+/**
+ * Fetches survey responses with NPS/CSAT data.
+ * Includes end_of_program, feedback (every-other-session), first_session, AND touchpoint surveys.
+ */
+export const getSurveyResponses = async (filter?: CompanyFilter): Promise<SurveyResponse[]> => {
+  // Helper to fetch all pages with a given filter method
+  const fetchAllPages = async (useCompanyId: boolean): Promise<any[]> => {
+    const allData: any[] = [];
+    let from = 0;
+    const pageSize = 1000;
+
+    while (true) {
+      let query = supabase
+        .from('survey_submissions')
+        .select('*')
+        .in('survey_type', ['end_of_program', 'feedback', 'first_session', 'touchpoint']);
+
+      // Apply company filter based on method
+      const fallbackName = filter?.accountName || filter?.companyName;
+      if (useCompanyId && filter?.companyId) {
+        query = query.eq('company_id', filter.companyId);
+      } else if (fallbackName) {
+        query = query.ilike('account_name', `%${fallbackName}%`);
+      }
+
+      const { data, error } = await query.range(from, from + pageSize - 1);
+
+      if (error) {
+        console.error('Error fetching survey responses:', error);
+        Sentry.captureException(error, { tags: { query: 'getSurveyResponses' } });
+        break;
+      }
+
+      if (!data || data.length === 0) break;
+
+      allData.push(...data);
+
+      if (data.length < pageSize) break;
+      from += pageSize;
+    }
+
+    return allData;
+  };
+
+  // Try with company_id first
+  let allData = filter?.companyId ? await fetchAllPages(true) : await fetchAllPages(false);
+
+  // Fallback: if company_id returned no results, try accountName or companyName
+  if (allData.length === 0 && filter?.companyId && (filter?.accountName || filter?.companyName)) {
+    allData = await fetchAllPages(false);
+  }
+
+  // Filter to records that have actual response data
+  // Different survey types have different fields:
+  // - end_of_program/feedback: nps, feedback_learned, feedback_insight, wellbeing_*
+  // - first_session: coach_satisfaction, match_experience
+  // - touchpoint: nps, feedback
+  const filteredData = allData.filter(d =>
+    d.nps !== null ||
+    d.feedback_learned ||
+    d.feedback_insight ||
+    d.wellbeing_satisfaction !== null ||
+    d.wellbeing_productivity !== null ||
+    d.wellbeing_balance !== null ||
+    // First session survey fields
+    d.coach_satisfaction !== null ||
+    d.match_experience !== null
+  );
+
+  // Map to legacy SurveyResponse format
+  return filteredData.map((d: any) => ({
+    email: d.email,
+    nps: d.nps,
+    coach_satisfaction: d.coach_satisfaction,
+    feedback_learned: d.feedback_learned,
+    feedback_insight: d.feedback_insight,
+    feedback_suggestions: d.feedback_suggestions,
+    program_title: d.program_title,
+    account_name: d.account_name,
+    company_id: d.company_id,
+    survey_type: d.survey_type,
+    // Wellbeing fields for impact calculations
+    wellbeing_satisfaction: d.wellbeing_satisfaction,
+    wellbeing_productivity: d.wellbeing_productivity,
+    wellbeing_balance: d.wellbeing_balance,
+    // First session survey fields
+    match_experience: d.match_experience,
+  })) as SurveyResponse[];
+};
+
+/**
+ * Fetches welcome survey baseline data in legacy format.
+ * Uses welcome_survey_baseline table which has comp_* competency fields.
+ */
+export const getWelcomeSurveyData = async (filter?: CompanyFilter): Promise<WelcomeSurveyEntry[]> => {
+  const cacheKey = getCacheKey('welcomeSurveyBaseline', filter);
+  const cached = getFromCache<WelcomeSurveyEntry[]>(cacheKey);
+  if (cached) return cached;
+
+  let query = supabase
+    .from('welcome_survey_baseline')
+    .select('*');
+
+  // Apply company filter
+  if (filter?.companyId) {
+    query = query.eq('company_id', filter.companyId);
+  } else if (filter?.accountName) {
+    query = query.ilike('account', `%${filter.accountName}%`);
+  }
+
+  let { data, error } = await query;
+
+  // Fallback: if company_id returned no results, try accountName or companyName
+  const fallbackName = filter?.accountName || filter?.companyName;
+  if (!error && (!data || data.length === 0) && filter?.companyId && fallbackName) {
+    const fallbackQuery = supabase
+      .from('welcome_survey_baseline')
+      .select('*')
+      .ilike('account', `%${fallbackName}%`);
+
+    const fallbackResult = await fallbackQuery;
+    data = fallbackResult.data;
+    error = fallbackResult.error;
+  }
+
+  if (error) {
+    console.error('Error fetching welcome survey data:', error);
+    Sentry.captureException(error, { tags: { query: 'getWelcomeSurveyData' } });
+    return [];
+  }
+
+  // Map to WelcomeSurveyEntry format - spread all fields to include sub_* columns
+  const result = data.map((d: any) => ({
+    ...d, // Include ALL fields from database (including sub_* columns)
+    // Override/normalize specific fields
+    email: d.email,
+    cohort: d.cohort || d.program_title || '',
+    company: d.company || d.account || '',
+    role: d.role,
+    satisfaction: d.satisfaction,
+    productivity: d.productivity,
+    work_life_balance: d.work_life_balance,
+    motivation: d.motivation,
+    inclusion: d.inclusion,
+    age_range: d.age_range,
+    tenure: d.tenure,
+    years_experience: d.years_experience,
+    // Normalize previous_coaching: handle 1, 1.0, '1', '1.0', true, 'Yes' → '1'; 0, 0.0, '0', '0.0', false, 'No' → '0'
+    previous_coaching: d.previous_coaching === null || d.previous_coaching === undefined
+      ? null
+      : (Number(d.previous_coaching) === 1 || d.previous_coaching === true || d.previous_coaching === 'Yes' || d.previous_coaching === 'yes')
+        ? '1'
+        : '0',
+    coaching_goals: d.coaching_goals,
+    program_title: d.program_title,
+    account_name: d.account,
+    company_id: d.company_id,
+    account: d.account,
+  })) as WelcomeSurveyEntry[];
+
+  setCache(cacheKey, result);
+  return result;
+};
+
+/**
+ * Fetches welcome survey data for Scale programs.
+ * For now, falls back to legacy table until Scale data is migrated.
+ */
+export const getWelcomeSurveyScaleData = async (filter?: CompanyFilter): Promise<WelcomeSurveyEntry[]> => {
+  const cacheKey = getCacheKey('welcomeSurveyScale', filter);
+  const cached = getFromCache<WelcomeSurveyEntry[]>(cacheKey);
+  if (cached) return cached;
+
+  // TODO: Update when Scale data is migrated to survey_submissions
+  let query = supabase
+    .from('welcome_survey_scale')
+    .select('*');
+
+  // Apply company filter - try company_id first, fallback to accountName if no results
+  // Note: welcome_survey_scale uses 'account' column for name filtering
+  if (filter?.companyId) {
+    query = query.eq('company_id', filter.companyId);
+  } else if (filter?.accountName) {
+    query = query.ilike('account', `%${filter.accountName}%`);
+  } else if (filter?.companyName) {
+    query = query.ilike('account', `%${filter.companyName}%`);
+  }
+
+  let { data, error } = await query;
+
+  // Fallback: if company_id returned no results, try accountName or companyName
+  // This handles cases where older data doesn't have company_id populated
+  const fallbackName = filter?.accountName || filter?.companyName;
+  if (!error && (!data || data.length === 0) && filter?.companyId && fallbackName) {
+    const fallbackQuery = supabase
+      .from('welcome_survey_scale')
+      .select('*')
+      .ilike('account', `%${fallbackName}%`);
+
+    const fallbackResult = await fallbackQuery;
+    data = fallbackResult.data;
+    error = fallbackResult.error;
+  }
+
+  if (error) {
+    console.error('Error fetching Scale welcome survey data:', error);
+    Sentry.captureException(error, { tags: { query: 'getWelcomeSurveyScaleData' } });
+    return [];
+  }
+
+  // Normalize data to match WelcomeSurveyEntry format (same as GROW data)
+  const result = data.map((d: any) => ({
+    ...d,
+    email: d.email,
+    cohort: d.cohort || d.program_title || '',
+    company: d.company || d.account_name || '',
+    role: d.role,
+    satisfaction: d.satisfaction,
+    productivity: d.productivity,
+    work_life_balance: d.work_life_balance,
+    motivation: d.motivation,
+    inclusion: d.inclusion,
+    age_range: d.age_range,
+    tenure: d.tenure,
+    years_experience: d.years_experience,
+    // Normalize previous_coaching: convert various formats to '1' (Yes), '0' (No), or null (Unknown)
+    // Handle: 1, 1.0, '1', '1.0', true, 'Yes', 'yes' → '1'
+    // Handle: 0, 0.0, '0', '0.0', false, 'No', 'no' → '0'
+    previous_coaching: d.previous_coaching === null || d.previous_coaching === undefined
+      ? null
+      : (Number(d.previous_coaching) === 1 || d.previous_coaching === true || d.previous_coaching === 'Yes' || d.previous_coaching === 'yes')
+        ? '1'
+        : '0',
+    coaching_goals: d.coaching_goals,
+    program_title: d.program_title,
+    account_name: d.account_name,
+    company_id: d.company_id,
+  })) as WelcomeSurveyEntry[];
+
+  setCache(cacheKey, result);
+  return result;
+};
+
+/**
+ * Fetches welcome survey data based on program type.
+ */
+export const getWelcomeSurveyByProgramType = async (programType: 'scale' | 'grow' = 'grow', filter?: CompanyFilter): Promise<WelcomeSurveyEntry[]> => {
+  if (programType === 'scale') {
+    return getWelcomeSurveyScaleData(filter);
+  }
+  return getWelcomeSurveyData(filter);
+};
+
+// ============================================
+// CONFIG & BENCHMARK QUERIES
+// ============================================
+
+/**
+ * Fetches program configuration from program_config table.
+ */
+export const getProgramConfig = async (filter?: CompanyFilter): Promise<ProgramConfig[]> => {
+  let query = supabase
+    .from('program_config')
+    .select('*');
+
+  // Apply company filter
+  if (filter?.companyId) {
+    query = query.eq('company_id', filter.companyId);
+  } else if (filter?.accountName) {
+    query = query.ilike('account_name', `%${filter.accountName}%`);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Error fetching program config:', error);
+    Sentry.captureException(error, { tags: { query: 'getProgramConfig' } });
+    return [];
+  }
+
+  return data as ProgramConfig[];
+};
+
+/**
+ * Fetches benchmark data for comparisons.
+ */
+export const getBenchmarks = async (programType: 'Scale' | 'GROW' = 'Scale'): Promise<Record<string, {
+  avg: number;
+  p25: number;
+  p75: number;
+  sampleSize: number;
+}>> => {
+  const { data, error } = await supabase
+    .from('boon_benchmarks')
+    .select('*')
+    .eq('program_type', programType);
+
+  if (error) {
+    console.error('Error fetching benchmarks:', error);
+    Sentry.captureException(error, { tags: { query: 'getBenchmarks', programType } });
+    return {};
+  }
+
+  const benchmarks: Record<string, any> = {};
+  data?.forEach((b: any) => {
+    benchmarks[b.metric_name] = {
+      avg: b.avg_value,
+      p25: b.percentile_25,
+      p75: b.percentile_75,
+      sampleSize: b.sample_size
+    };
+  });
+
+  return benchmarks;
+};
+
+/**
+ * Calculates basic stats from an array of sessions.
+ */
+export const calculateStats = (sessions: Session[]): DashboardStats => {
+  const now = new Date();
+  
+  return {
+    totalSessions: sessions.length,
+    completedSessions: sessions.filter(s => {
+       const status = (s.status || '').toLowerCase();
+       return status.includes('completed');
+    }).length,
+    upcomingSessions: sessions.filter(s => {
+      const date = new Date(s.session_date);
+      const status = (s.status || '').toLowerCase();
+      return status === 'scheduled' && date >= now;
+    }).length,
+  };
+};
+
+// ============================================
+// HELPER: BUILD COMPANY FILTER FROM USER CONTEXT
+// ============================================
+
+/**
+ * Builds the appropriate CompanyFilter based on user metadata.
+ * 
+ * Logic:
+ * - If user has account_name in JWT → they're part of a multi-location company
+ *   → Use accountName to filter to their specific location
+ * - If user only has company_id → single company account
+ *   → Use companyId to get all their company data
+ * - Fallback: use company name with partial matching
+ * 
+ * @param companyId - UUID from app_metadata.company_id
+ * @param accountName - Location name from app_metadata.account_name (for multi-location)
+ * @param companyName - Company name from app_metadata.company (fallback)
+ * @returns CompanyFilter configured for the user's access level
+ */
+export const buildCompanyFilter = (
+  companyId?: string,
+  accountName?: string,
+  companyName?: string
+): CompanyFilter => {
+  // Clean company name for fallback use
+  const cleanedCompanyName = companyName
+    ? companyName.split(' - ')[0].replace(/\s+(SCALE|GROW|EXEC)$/i, '').trim()
+    : undefined;
+
+  // ALWAYS include companyId when available - it's the most reliable filter
+  // accountName is secondary for multi-location filtering/display
+  if (companyId) {
+    return {
+      companyId,
+      accountName: accountName || undefined,
+      companyName: cleanedCompanyName
+    };
+  }
+
+  // Fallback: no companyId available, use accountName
+  if (accountName) {
+    return { accountName, companyName: cleanedCompanyName };
+  }
+
+  // Fallback: use company name with partial matching
+  if (cleanedCompanyName) {
+    return { accountName: cleanedCompanyName, companyName: cleanedCompanyName };
+  }
+  
+  // No filter - will return all data (should not happen in practice)
+  return {};
+};
+
+// ============================================
+// LOOKUP TABLE QUERIES (Source of Truth)
+// ============================================
+
+export interface Company {
+  id: string;
+  name: string;
+  slug: string;
+  program_type?: string;
+  is_active?: boolean;
+}
+
+export interface Program {
+  id: string;
+  company_id: string;
+  name: string;
+  program_type?: 'GROW' | 'SCALE' | 'EXEC';
+  salesforce_id?: string;
+}
+
+/**
+ * Fetches all companies from program_config (source of truth).
+ * Returns distinct account names as companies.
+ */
+export const getCompanies = async (): Promise<Company[]> => {
+  const { data, error } = await supabase
+    .from('program_config')
+    .select('company_id, account_name, program_type')
+    .not('account_name', 'is', null)
+    .order('account_name');
+
+  if (error) {
+    console.error('Error fetching companies:', error);
+    Sentry.captureException(error, { tags: { query: 'getCompanies' } });
+    return [];
+  }
+
+  // Dedupe by account_name, keep first occurrence
+  const seen = new Set<string>();
+  const companies: Company[] = [];
+
+  for (const row of data || []) {
+    if (row.account_name && !seen.has(row.account_name)) {
+      seen.add(row.account_name);
+      companies.push({
+        id: row.company_id || row.account_name,
+        name: row.account_name,
+        slug: row.account_name.toLowerCase().replace(/\s+/g, '-'),
+        program_type: row.program_type,
+        is_active: true
+      });
+    }
+  }
+
+  return companies;
+};
+
+/**
+ * Fetches programs from program_config (source of truth).
+ */
+export const getPrograms = async (companyId?: string, companyName?: string): Promise<Program[]> => {
+  let query = supabase
+    .from('program_config')
+    .select('id, company_id, account_name, program_type, program_title, salesforce_program_id')
+    .order('account_name');
+
+  if (companyId) {
+    query = query.eq('company_id', companyId);
+  } else if (companyName) {
+    query = query.ilike('account_name', `%${companyName}%`);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Error fetching programs:', error);
+    Sentry.captureException(error, { tags: { query: 'getPrograms' } });
+    return [];
+  }
+
+  // Map program_config to Program interface
+  return (data || []).map(row => ({
+    id: row.id,
+    company_id: row.company_id,
+    name: row.program_title || `${row.account_name} ${row.program_type}`,
+    program_type: row.program_type as 'GROW' | 'SCALE' | 'EXEC' | undefined,
+    salesforce_id: row.salesforce_program_id
+  }));
+};
+
+/**
+ * Fetches programs for dropdown by company name.
+ * Uses program_config as source of truth.
+ */
+export const getProgramsForDropdown = async (companyName: string, programType?: 'GROW' | 'SCALE'): Promise<string[]> => {
+  let query = supabase
+    .from('program_config')
+    .select('account_name, program_type, program_title')
+    .ilike('account_name', `%${companyName}%`)
+    .order('account_name');
+
+  if (programType) {
+    query = query.eq('program_type', programType);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Error fetching programs for dropdown:', error);
+    Sentry.captureException(error, { tags: { query: 'getProgramsForDropdown' } });
+    return [];
+  }
+
+  return (data || []).map(p => p.program_title || `${p.account_name} ${p.program_type}`);
+};
