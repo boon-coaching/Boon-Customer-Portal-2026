@@ -541,12 +541,14 @@ const TestimonialsSection: React.FC<{
       });
   
   // Get all feedback text
-  const allFeedback = filteredSurveys
-    .flatMap(s => [
-      (s as any).feedback_learned,
-      (s as any).feedback_insight
-    ])
-    .filter(f => f && typeof f === 'string' && f.length > 30);
+  const allFeedback = [...new Set(
+    filteredSurveys
+      .flatMap(s => [
+        (s as any).feedback_learned,
+        (s as any).feedback_insight
+      ])
+      .filter(f => f && typeof f === 'string' && f.length > 30)
+  )];
   
   if (allFeedback.length === 0) return null;
   

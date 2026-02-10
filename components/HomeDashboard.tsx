@@ -756,7 +756,7 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({ programTypeFilter }) => {
         const sorted = sessions
           .filter(s => {
               const status = (s.status || '').toLowerCase();
-              return status.includes('completed') || (!status && new Date(s.session_date) < new Date());
+              return status.includes('completed') || status.includes('no show') || status.includes('client no show') || (!status && new Date(s.session_date) < new Date());
           })
           .sort((a, b) => new Date(b.session_date).getTime() - new Date(a.session_date).getTime());
         
@@ -884,10 +884,10 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({ programTypeFilter }) => {
 
       {/* Key Metrics Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.completedSessionsCount > 0 && (
-          <MetricCard 
-              value={stats.completedSessionsCount} 
-              label="Sessions Completed" 
+        {stats.sessionsUsedCount > 0 && (
+          <MetricCard
+              value={stats.sessionsUsedCount}
+              label="Billable Sessions"
               icon={<CheckCircle2 className="w-5 h-5 text-boon-blue" />}
           />
         )}
