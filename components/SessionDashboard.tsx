@@ -884,7 +884,7 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
       <div className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-sm border border-gray-100 relative overflow-hidden">
         <h3 className="text-xs md:text-sm font-bold text-gray-500 uppercase tracking-wider mb-4 md:mb-6 flex items-center gap-2">
           <TrendingUp className="w-4 h-4 text-boon-blue" />
-          Completed Sessions Trend
+          Billable Sessions Trend
         </h3>
         <div className="h-36 md:h-64 w-full overflow-x-auto">
            <div className="min-w-[600px] h-full">
@@ -1152,7 +1152,7 @@ const SimpleTrendChart = ({ sessions, filterType, filterValue, programFilter }: 
       const isNoShow = status.includes('no show') || status.includes('noshow') || status.includes('late cancel') || status.includes('client no show');
       const isCompleted = status.includes('completed') || (status === '' && isPast) || (status === 'no label' && isPast);
 
-      if (!isNoShow && isCompleted) {
+      if (isNoShow || isCompleted) {
          const key = `${sessionDate.getFullYear()}-${String(sessionDate.getMonth() + 1).padStart(2, '0')}`;
          monthlyCounts[key] = (monthlyCounts[key] || 0) + 1;
       }
@@ -1172,7 +1172,7 @@ const SimpleTrendChart = ({ sessions, filterType, filterValue, programFilter }: 
   }, [sessions, filterType, filterValue, programFilter]);
 
   if (chartData.length === 0) {
-     return <div className="flex items-center justify-center h-full text-gray-400 text-xs uppercase font-bold">No completed sessions found</div>;
+     return <div className="flex items-center justify-center h-full text-gray-400 text-xs uppercase font-bold">No billable sessions found</div>;
   }
 
   const width = 1000;
