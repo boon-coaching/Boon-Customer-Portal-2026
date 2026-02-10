@@ -156,6 +156,10 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
     );
     
     const completedSessions = sessions.filter(s => (s as any).status === 'Completed');
+    const billableSessions = sessions.filter(s => {
+      const status = ((s as any).status || '').toLowerCase();
+      return status === 'completed' || status.includes('no show') || status.includes('client no show');
+    });
     const uniqueEmployees = new Set(sessions.map(s => (s as any).employee_name?.toLowerCase()).filter(Boolean)).size;
     
     // Calculate monthly trend (last 6 months)
@@ -168,7 +172,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
       monthlyMap.set(key, 0);
     }
     
-    completedSessions.forEach(s => {
+    billableSessions.forEach(s => {
       const date = new Date((s as any).session_date);
       if (date >= sixMonthsAgo) {
         const key = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
@@ -526,7 +530,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
       pdf.setTextColor(31, 41, 55);
       pdf.setFontSize(11);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Session Trend (Last 6 Months)', margin, y);
+      pdf.text('Billable Sessions Trend (Last 6 Months)', margin, y);
       y += 5;
       
       const chartHeight = 28;
