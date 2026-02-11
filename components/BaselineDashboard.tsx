@@ -5,6 +5,7 @@ import { WelcomeSurveyEntry, ProgramConfig, FocusAreaSelection, CompetencyScoreR
 import { supabase } from '../lib/supabaseClient';
 import { useAnalytics, AnalyticsEvents } from '../lib/useAnalytics';
 import ExecutiveSignals from './ExecutiveSignals';
+import ScaleBaselineDashboard from './ScaleBaselineDashboard';
 import { 
   Users, 
   Filter, 
@@ -37,6 +38,7 @@ const BaselineDashboard: React.FC<BaselineDashboardProps> = ({ programTypeFilter
   const [selectedCohort, setSelectedCohort] = useState('All Programs');
   const [companyName, setCompanyName] = useState('');
   const [accountName, setAccountName] = useState('');
+  const [fallbackToScale, setFallbackToScale] = useState(false);
   const [boonAverages, setBoonAverages] = useState<{satisfaction: number, productivity: number, work_life_balance: number}>({
     satisfaction: 0, productivity: 0, work_life_balance: 0
   });
@@ -97,6 +99,15 @@ const BaselineDashboard: React.FC<BaselineDashboardProps> = ({ programTypeFilter
           supabase.from('boon_benchmarks').select('*').ilike('program_type', 'scale'),
           getPrograms(undefined, accName || company)
         ]);
+
+        // For GROW programs: if welcome_survey_baseline has no data but
+        // welcome_survey_scale does, fall back to the SCALE baseline view.
+        // This handles companies configured as GROW that use SCALE-style onboarding surveys.
+        if (growData.length === 0 && scaleData.length > 0) {
+          setFallbackToScale(true);
+          setLoading(false);
+          return;
+        }
 
         // Combine data from both GROW and SCALE welcome surveys
         const result = [...growData, ...scaleData];
@@ -531,6 +542,11 @@ const BaselineDashboard: React.FC<BaselineDashboardProps> = ({ programTypeFilter
       }
     };
   }, [data, employees, selectedCohort, programsLookup, baselineCompetencies, programTypeFilter]);
+
+  // GROW company with data only in welcome_survey_scale — render SCALE-style baseline
+  if (fallbackToScale) {
+    return <ScaleBaselineDashboard />;
+  }
 
   if (loading) {
      return (
