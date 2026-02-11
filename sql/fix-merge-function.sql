@@ -31,7 +31,6 @@ DECLARE
   caller_company_id TEXT;
   caller_role TEXT;
   affected_sessions INT;
-  affected_surveys INT;
 BEGIN
   -- 1. Verify caller is authenticated
   IF auth.uid() IS NULL THEN
@@ -81,10 +80,7 @@ BEGIN
   SET employee_id = keep_employee_id
   WHERE employee_id = delete_employee_id;
 
-  UPDATE survey_submissions
-  SET employee_id = keep_employee_id
-  WHERE employee_id = delete_employee_id;
-  GET DIAGNOSTICS affected_surveys = ROW_COUNT;
+  -- Note: survey_submissions links by email, not employee_id, so no update needed
 
   -- 7. Delete the duplicate employee record
   DELETE FROM employee_manager WHERE id = delete_employee_id;
@@ -94,8 +90,7 @@ BEGIN
     'success', true,
     'kept_employee_id', keep_employee_id,
     'deleted_employee_id', delete_employee_id,
-    'sessions_updated', affected_sessions,
-    'surveys_updated', affected_surveys
+    'sessions_updated', affected_sessions
   );
 END;
 $$;
