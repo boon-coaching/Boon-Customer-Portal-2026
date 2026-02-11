@@ -154,27 +154,50 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({ programTypeFilter }) => {
           getPrograms(undefined, accName || company)
         ]);
 
-        // Fetch welcome survey completions for utilization calculation
+        // Fetch welcome survey completions for utilization calculation (baseline first, fall back to scale)
         let welcomeSurveyData: any[] = [];
+        const wsFields = 'id, email, first_name, last_name, account, program_title, company_id, created_at';
         if (accName) {
-          // Use account_name for grouped company queries
           const { data: wsData } = await supabase
             .from('welcome_survey_baseline')
-            .select('id, email, first_name, last_name, account, program_title, company_id, created_at')
+            .select(wsFields)
             .ilike('account', `%${accName}%`);
           welcomeSurveyData = wsData || [];
         } else if (compId) {
           const { data: wsData } = await supabase
             .from('welcome_survey_baseline')
-            .select('id, email, first_name, last_name, account, program_title, company_id, created_at')
+            .select(wsFields)
             .eq('company_id', compId);
           welcomeSurveyData = wsData || [];
         } else if (company) {
           const { data: wsData } = await supabase
             .from('welcome_survey_baseline')
-            .select('id, email, first_name, last_name, account, program_title, company_id, created_at')
+            .select(wsFields)
             .ilike('account', `%${company.split(' - ')[0]}%`);
           welcomeSurveyData = wsData || [];
+        }
+
+        // Fallback: if welcome_survey_baseline has no data, check welcome_survey_scale
+        if (welcomeSurveyData.length === 0) {
+          if (accName) {
+            const { data: wsData } = await supabase
+              .from('welcome_survey_scale')
+              .select(wsFields)
+              .ilike('account', `%${accName}%`);
+            welcomeSurveyData = wsData || [];
+          } else if (compId) {
+            const { data: wsData } = await supabase
+              .from('welcome_survey_scale')
+              .select(wsFields)
+              .eq('company_id', compId);
+            welcomeSurveyData = wsData || [];
+          } else if (company) {
+            const { data: wsData } = await supabase
+              .from('welcome_survey_scale')
+              .select(wsFields)
+              .ilike('account', `%${company.split(' - ')[0]}%`);
+            welcomeSurveyData = wsData || [];
+          }
         }
 
         // Set benchmarks

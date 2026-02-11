@@ -1069,4 +1069,5 @@ const ScaleTestimonialsSection: React.FC<{
   );
 };
 
+export { ScaleTestimonialsSection };
 export default ScaleDashboard;
