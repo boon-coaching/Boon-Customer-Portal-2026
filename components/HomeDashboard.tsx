@@ -728,18 +728,30 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({ programTypeFilter }) => {
     const topFocusAreasFromSurvey = subTopicCounts.slice(0, 5);
 
     const getQualityQuotes = (data: any[]) => {
-      // Only use feedback_learned and feedback_insight (positive feedback)
-      // Exclude feedback_suggestions (improvement/criticism)
-      const allQuotes = data
+      // Primary: use feedback_learned and feedback_insight (positive end-of-program feedback)
+      // Fallback: also include feedback_suggestions if primary fields have no data
+      let allQuotes = data
         .flatMap(d => [d.feedback_learned, d.feedback_insight].filter(Boolean))
         .filter(text => {
             if (!text || text.length < 50) return false;
             const lower = text.toLowerCase();
-            // Filter out low-quality responses
             if (lower.includes("i don't know") || lower.includes("not sure") || lower.includes("nothing") || lower.includes("n/a")) return false;
             if (lower.match(/^(great|good|nice|helpful|none|no|null|na)\.?$/i)) return false;
             return true;
         });
+
+      // Fallback: if no quotes from primary fields, try feedback_suggestions
+      if (allQuotes.length === 0) {
+        allQuotes = data
+          .flatMap(d => [d.feedback_suggestions].filter(Boolean))
+          .filter(text => {
+              if (!text || text.length < 50) return false;
+              const lower = text.toLowerCase();
+              if (lower.includes("i don't know") || lower.includes("not sure") || lower.includes("nothing") || lower.includes("n/a")) return false;
+              if (lower.match(/^(great|good|nice|helpful|none|no|null|na)\.?$/i)) return false;
+              return true;
+          });
+      }
       
       // Deduplicate quotes
       const uniqueQuotes = [...new Set(allQuotes)];
