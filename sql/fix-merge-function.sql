@@ -1,6 +1,8 @@
 -- Secure version of merge_duplicate_employees
 -- Adds authorization checks before performing the merge
 --
+-- NOTE: employee_manager.id is BIGINT, so this function accepts BIGINT parameters.
+--
 -- Changes from original:
 -- 1. SET search_path = public (prevents search_path hijacking)
 -- 2. Authorization: caller must be authenticated
@@ -10,9 +12,13 @@
 -- 6. Also updates survey_submissions (was missing from original)
 -- 7. REVOKE/GRANT to restrict to authenticated users only
 
+-- First, drop any existing overloads to avoid "function is not unique" errors
+DROP FUNCTION IF EXISTS merge_duplicate_employees(UUID, UUID);
+DROP FUNCTION IF EXISTS merge_duplicate_employees(BIGINT, BIGINT);
+
 CREATE OR REPLACE FUNCTION merge_duplicate_employees(
-  keep_employee_id UUID,
-  delete_employee_id UUID
+  keep_employee_id BIGINT,
+  delete_employee_id BIGINT
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -20,9 +26,9 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  keep_company_id UUID;
-  delete_company_id UUID;
-  caller_company_id UUID;
+  keep_company_id TEXT;
+  delete_company_id TEXT;
+  caller_company_id TEXT;
   caller_role TEXT;
   affected_sessions INT;
   affected_surveys INT;
@@ -33,18 +39,18 @@ BEGIN
   END IF;
 
   -- 2. Get caller's company_id and role from JWT
-  caller_company_id := (auth.jwt()->'app_metadata'->>'company_id')::uuid;
+  caller_company_id := auth.jwt()->'app_metadata'->>'company_id';
   caller_role := auth.jwt()->'app_metadata'->>'role';
 
   -- 3. Validate both employees exist and get their company_ids
-  SELECT company_id INTO keep_company_id
+  SELECT company_id::TEXT INTO keep_company_id
   FROM employee_manager WHERE id = keep_employee_id;
 
   IF keep_company_id IS NULL THEN
     RAISE EXCEPTION 'Employee to keep (%) not found', keep_employee_id;
   END IF;
 
-  SELECT company_id INTO delete_company_id
+  SELECT company_id::TEXT INTO delete_company_id
   FROM employee_manager WHERE id = delete_employee_id;
 
   IF delete_company_id IS NULL THEN
@@ -95,5 +101,5 @@ END;
 $$;
 
 -- Only authenticated users can call this function
-REVOKE ALL ON FUNCTION merge_duplicate_employees(UUID, UUID) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION merge_duplicate_employees(UUID, UUID) TO authenticated;
+REVOKE ALL ON FUNCTION merge_duplicate_employees(BIGINT, BIGINT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION merge_duplicate_employees(BIGINT, BIGINT) TO authenticated;

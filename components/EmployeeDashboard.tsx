@@ -381,10 +381,10 @@ const EmployeeDashboard: React.FC = () => {
       console.log('Merging employees:', { keep: keepEmployee.id, delete: deleteEmployee.id });
 
       // Use RPC function to merge employees (bypasses RLS)
-      // Ensure IDs are strings (UUIDs) to avoid ambiguity with legacy BIGINT overload
+      // Pass IDs as numbers — employee_manager.id is BIGINT
       const { data, error: rpcError } = await supabase.rpc('merge_duplicate_employees', {
-        keep_employee_id: String(keepEmployee.id),
-        delete_employee_id: String(deleteEmployee.id)
+        keep_employee_id: Number(keepEmployee.id),
+        delete_employee_id: Number(deleteEmployee.id)
       });
 
       if (rpcError) {
