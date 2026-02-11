@@ -7,6 +7,7 @@ import { useAnalytics, AnalyticsEvents } from '../lib/useAnalytics';
 import ExecutiveSignals from './ExecutiveSignals';
 import { AnimatedBarChart, AnimatedProgressBar, CountUp } from './Animations';
 import { BarChart, AlertCircle, Clock, Info, MessageSquareQuote, ChevronDown, ChevronUp } from 'lucide-react';
+import { ScaleTestimonialsSection } from './ScaleDashboard';
 
 // --- Program Display Name Mapping ---
 const programDisplayNames: Record<string, string> = {
@@ -78,6 +79,7 @@ const ImpactDashboard: React.FC<ImpactDashboardProps> = ({ programTypeFilter }) 
   const [error, setError] = useState<string | null>(null);
   const [selectedProgram, setSelectedProgram] = useState('All Programs');
   const [expandedTheme, setExpandedTheme] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState<string>('');
   const { track } = useAnalytics();
   const hasTrackedView = useRef(false);
 
@@ -131,6 +133,7 @@ const ImpactDashboard: React.FC<ImpactDashboardProps> = ({ programTypeFilter }) 
         setBaselineData(baseData);
         setSurveys(surveyData);
         setProgramsLookup(programsData);
+        setCompanyName(accName || company);
       } catch (err: any) {
         setError(err.message || 'Failed to load competency data');
       } finally {
@@ -479,13 +482,22 @@ const ImpactDashboard: React.FC<ImpactDashboardProps> = ({ programTypeFilter }) 
               )}
             </div>
             
-            {/* Testimonials Section */}
-            <TestimonialsSection 
-              surveys={surveys} 
-              selectedProgram={selectedProgram}
-              expandedTheme={expandedTheme}
-              setExpandedTheme={setExpandedTheme}
-            />
+            {/* Testimonials Section - fall back to SCALE format if no end-of-program surveys */}
+            {surveys.some(s => (s as any).survey_type === 'end_of_program') ? (
+              <TestimonialsSection
+                surveys={surveys}
+                selectedProgram={selectedProgram}
+                expandedTheme={expandedTheme}
+                setExpandedTheme={setExpandedTheme}
+              />
+            ) : (
+              <ScaleTestimonialsSection
+                surveys={surveys}
+                companyName={companyName}
+                expandedTheme={expandedTheme}
+                setExpandedTheme={setExpandedTheme}
+              />
+            )}
         </div>
       )}
     </div>

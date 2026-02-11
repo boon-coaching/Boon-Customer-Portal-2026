@@ -266,6 +266,9 @@ const MainPortalLayout: React.FC = () => {
   const [hasBothProgramTypes, setHasBothProgramTypes] = useState(false);  // For companies with both GROW and SCALE
   const [selectedProgramView, setSelectedProgramView] = useState<'GROW' | 'Scale'>('Scale');  // For mixed companies
   
+  // Whether GROW baseline data exists (controls Impact tab visibility)
+  const [hasGrowBaseline, setHasGrowBaseline] = useState(true);
+
   // Show Setup tab only during onboarding (before launch_date)
   const [showSetup, setShowSetup] = useState(false);
   
@@ -433,6 +436,25 @@ const MainPortalLayout: React.FC = () => {
         }
 
         setProgramTypeLoading(false);
+
+        // Check if welcome_survey_baseline has data for this company
+        // Used to hide Impact tab for GROW programs with no baseline data
+        try {
+          let baselineQuery = supabase
+            .from('welcome_survey_baseline')
+            .select('id', { count: 'exact', head: true });
+
+          if (companyId) {
+            baselineQuery = baselineQuery.eq('company_id', companyId);
+          } else if (companyBase) {
+            baselineQuery = baselineQuery.ilike('account', `%${companyBase}%`);
+          }
+
+          const { count } = await baselineQuery;
+          if (count === 0 || count === null) {
+            setHasGrowBaseline(false);
+          }
+        } catch {}
 
         // Get program type from JWT app_metadata (no DB query needed - avoids RLS issues)
         // IMPORTANT: Default to Scale (more restrictive) to prevent GROW session data exposure
@@ -725,13 +747,13 @@ const MainPortalLayout: React.FC = () => {
             label="Themes" 
           />
 
-          {/* Impact - only show for GROW */}
-          {!isScale && (
-            <NavItem 
-              active={activeTab === 'impact'} 
+          {/* Impact - only show for GROW programs that have baseline data */}
+          {!isScale && hasGrowBaseline && (
+            <NavItem
+              active={activeTab === 'impact'}
               onClick={() => handleNavClick('impact')}
-              icon={<TrendingUp size={20} />} 
-              label="Impact" 
+              icon={<TrendingUp size={20} />}
+              label="Impact"
             />
           )}
 
