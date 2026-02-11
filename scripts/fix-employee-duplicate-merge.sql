@@ -59,58 +59,9 @@ WHERE LOWER(last_name) = 'morgenstern' AND LOWER(first_name) = 'eric';
 
 
 -- =============================================
--- PERMANENT FIX: Create RPC function for merging employees
--- This function runs with SECURITY DEFINER to bypass RLS
+-- LEGACY: This BIGINT function has been superseded by the UUID version
+-- in sql/fix-merge-function.sql. Do NOT run this section.
+-- If both overloads exist, Supabase RPC calls fail with
+-- "function is not unique" error.
+-- To remove the legacy overload, run: sql/drop-legacy-merge-overload.sql
 -- =============================================
-
-CREATE OR REPLACE FUNCTION merge_duplicate_employees(
-  keep_employee_id BIGINT,
-  delete_employee_id BIGINT
-)
-RETURNS JSONB
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-  result JSONB;
-  sessions_updated INT;
-  scale_updated INT;
-  baseline_updated INT;
-BEGIN
-  -- Reassign sessions
-  UPDATE session_tracking
-  SET employee_id = keep_employee_id
-  WHERE employee_id = delete_employee_id;
-  GET DIAGNOSTICS sessions_updated = ROW_COUNT;
-
-  -- Reassign welcome_survey_scale
-  UPDATE welcome_survey_scale
-  SET employee_id = keep_employee_id
-  WHERE employee_id = delete_employee_id;
-  GET DIAGNOSTICS scale_updated = ROW_COUNT;
-
-  -- Reassign welcome_survey_baseline
-  UPDATE welcome_survey_baseline
-  SET employee_id = keep_employee_id
-  WHERE employee_id = delete_employee_id;
-  GET DIAGNOSTICS baseline_updated = ROW_COUNT;
-
-  -- Delete the duplicate employee
-  DELETE FROM employee_manager
-  WHERE id = delete_employee_id;
-
-  result := jsonb_build_object(
-    'success', true,
-    'sessions_updated', sessions_updated,
-    'scale_updated', scale_updated,
-    'baseline_updated', baseline_updated
-  );
-
-  RETURN result;
-EXCEPTION WHEN OTHERS THEN
-  RETURN jsonb_build_object(
-    'success', false,
-    'error', SQLERRM
-  );
-END;
-$$;
