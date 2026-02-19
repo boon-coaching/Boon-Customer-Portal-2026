@@ -125,9 +125,13 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
     // Calculate date range filter
     const now = new Date();
     let startDate: Date | null = null;
-    
+    let endDate: Date | null = null;
+
     if (dateRange === 'ytd') {
       startDate = new Date(now.getFullYear(), 0, 1); // Jan 1 of current year
+    } else if (dateRange === '2025') {
+      startDate = new Date(2025, 0, 1); // Jan 1, 2025
+      endDate = new Date(2026, 0, 1); // Jan 1, 2026 (exclusive)
     } else if (dateRange === 'q4') {
       startDate = new Date(2024, 9, 1); // Oct 1, 2024
     } else if (dateRange === 'q3') {
@@ -144,6 +148,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
       if (!startDate) return true; // 'all' time
       if (!dateStr) return false;
       const date = new Date(dateStr);
+      if (endDate) return date >= startDate && date < endDate;
       return date >= startDate;
     };
     
@@ -948,6 +953,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
                 >
                   <option value="all">All Time</option>
                   <option value="ytd">Year to Date</option>
+                  <option value="2025">Full Year 2025</option>
                   <option value="q4">Q4 2024</option>
                   <option value="q3">Q3 2024</option>
                 </select>
