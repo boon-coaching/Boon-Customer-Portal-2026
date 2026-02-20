@@ -451,7 +451,7 @@ const SetupDashboard: React.FC = () => {
       : programs.some(p => p.type === 'GROW') ? 'grow'
       : programs.some(p => p.type === 'EXEC') ? 'exec'
       : 'scale';
-    return `/employee-facing-${programType}-${slug}`;
+    return `https://www.boon-health.com/employee-facing-${programType}-${slug}`;
   };
 
   if (loading) {
@@ -1397,7 +1397,7 @@ const SetupDashboard: React.FC = () => {
                 <label className="text-sm font-semibold text-gray-700">Slack Message</label>
                 <button
                   onClick={async () => {
-                    const slackText = `Hey team! We're excited to announce that ${companyName.split(' - ')[0]} has partnered with Boon to offer free 1-on-1 coaching to help you grow as a leader. Sign up and book your first session here: ${window.location.origin}${getLaunchPageUrl()}`;
+                    const slackText = `Hey team! We're excited to announce that ${companyName.split(' - ')[0]} has partnered with Boon to offer free 1-on-1 coaching to help you grow as a leader. Sign up and book your first session here: ${getLaunchPageUrl()}`;
                     await navigator.clipboard.writeText(slackText);
                     setCopied(true);
                     setTimeout(() => setCopied(false), 2000);
@@ -1420,7 +1420,7 @@ const SetupDashboard: React.FC = () => {
                 </button>
               </div>
               <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-700 leading-relaxed">
-                Hey team! We're excited to announce that {companyName.split(' - ')[0]} has partnered with Boon to offer free 1-on-1 coaching to help you grow as a leader. Sign up and book your first session here: {window.location.origin}{getLaunchPageUrl()}
+                Hey team! We're excited to announce that {companyName.split(' - ')[0]} has partnered with Boon to offer free 1-on-1 coaching to help you grow as a leader. Sign up and book your first session here: {getLaunchPageUrl()}
               </div>
             </div>
             <div>
@@ -1428,7 +1428,7 @@ const SetupDashboard: React.FC = () => {
                 <label className="text-sm font-semibold text-gray-700">Email One-liner</label>
                 <button
                   onClick={async () => {
-                    const emailText = `${companyName.split(' - ')[0]} is now offering free professional coaching through Boon. Visit ${window.location.origin}${getLaunchPageUrl()} to learn more and book your first session.`;
+                    const emailText = `${companyName.split(' - ')[0]} is now offering free professional coaching through Boon. Visit ${getLaunchPageUrl()} to learn more and book your first session.`;
                     await navigator.clipboard.writeText(emailText);
                     setCopied(true);
                     setTimeout(() => setCopied(false), 2000);
@@ -1451,7 +1451,7 @@ const SetupDashboard: React.FC = () => {
                 </button>
               </div>
               <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-700 leading-relaxed">
-                {companyName.split(' - ')[0]} is now offering free professional coaching through Boon. Visit {window.location.origin}{getLaunchPageUrl()} to learn more and book your first session.
+                {companyName.split(' - ')[0]} is now offering free professional coaching through Boon. Visit {getLaunchPageUrl()} to learn more and book your first session.
               </div>
             </div>
           </div>
