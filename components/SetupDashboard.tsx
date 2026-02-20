@@ -12,8 +12,8 @@ const TASK_CATEGORIES = [
     tasks: [
       { id: 'schedule_launch', label: 'Schedule launch date', actionLabel: 'Set Date', actionType: 'date_modal' },
       { id: 'upload_roster', label: 'Upload employee roster', actionLabel: 'Employees', actionType: 'link', actionUrl: '/employees' },
-      { id: 'review_welcome_email', label: 'Review employee welcome email', actionLabel: 'Preview', actionType: 'preview_email' },
-      { id: 'send_announcement', label: 'Send company-wide announcement (optional)', actionLabel: null, actionType: 'checkbox' },
+      { id: 'review_launch_page', label: 'Review employee launch page', actionLabel: 'View Page', actionType: 'preview_launch_page' },
+      { id: 'send_announcement', label: 'Send announcement to your team', actionLabel: 'Get Copy', actionType: 'announcement_modal' },
     ]
   },
   {
@@ -164,6 +164,7 @@ const SetupDashboard: React.FC = () => {
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [showEapModal, setShowEapModal] = useState(false);
   const [showContextModal, setShowContextModal] = useState(false);
+  const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
   
   const [selectedProvider, setSelectedProvider] = useState<'default' | 'microsoft' | 'google'>('default');
   const [copied, setCopied] = useState(false);
@@ -444,17 +445,13 @@ const SetupDashboard: React.FC = () => {
     ? Math.max(0, Math.ceil((new Date(launchDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : null;
 
-  const getWelcomeEmailUrl = () => {
-    if (programs.some(p => p.type === 'EXEC')) {
-      return 'https://storage.googleapis.com/boon-public-assets/Welcome_Email_Template_EXEC.pdf';
-    }
-    if (programs.some(p => p.type === 'GROW')) {
-      return 'https://storage.googleapis.com/boon-public-assets/Welcome_Email_Template_GROW.pdf';
-    }
-    if (programs.some(p => p.type === 'SCALE')) {
-      return 'https://storage.googleapis.com/boon-public-assets/Welcome_Email_Template_SCALE.pdf';
-    }
-    return 'https://storage.googleapis.com/boon-public-assets/Welcome_Email_Template_GROW.pdf';
+  const getLaunchPageUrl = () => {
+    const slug = companyName.split(' - ')[0].toLowerCase().replace(/\s+/g, '-');
+    const programType = programs.some(p => p.type === 'SCALE') ? 'scale'
+      : programs.some(p => p.type === 'GROW') ? 'grow'
+      : programs.some(p => p.type === 'EXEC') ? 'exec'
+      : 'scale';
+    return `/employee-facing-${programType}-${slug}`;
   };
 
   if (loading) {
@@ -479,9 +476,12 @@ const SetupDashboard: React.FC = () => {
         setTempDate(launchDate || '');
         setShowDateModal(true);
         break;
-      case 'preview_email':
-        window.open(getWelcomeEmailUrl(), '_blank');
+      case 'preview_launch_page':
+        window.open(getLaunchPageUrl(), '_blank');
         toggleTask(task.id);
+        break;
+      case 'announcement_modal':
+        setShowAnnouncementModal(true);
         break;
       case 'scroll_to_focus':
         document.getElementById('focus-areas-section')?.scrollIntoView({ behavior: 'smooth' });
@@ -696,7 +696,8 @@ const SetupDashboard: React.FC = () => {
                                   onClick={() => handleTaskAction(task)}
                                   className="px-3 py-1.5 text-xs font-medium text-boon-blue bg-boon-blue/10 rounded-lg hover:bg-boon-blue/20 transition-colors flex items-center gap-1 flex-shrink-0 ml-2"
                                 >
-                                  {task.actionType === 'preview_email' && <Eye size={12} />}
+                                  {task.actionType === 'preview_launch_page' && <Eye size={12} />}
+                                  {task.actionType === 'announcement_modal' && <MessageSquare size={12} />}
                                   {task.actionType === 'link' && <ExternalLink size={12} />}
                                   {task.actionType === 'allowlist_modal' && <Mail size={12} />}
                                   {task.actionLabel}
@@ -1006,27 +1007,11 @@ const SetupDashboard: React.FC = () => {
           <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
             <h3 className="font-bold text-gray-900 mb-4">Resources</h3>
             <div className="space-y-1">
-              {programs.some(p => p.type === 'EXEC') && (
-                <ResourceLink 
-                  icon={FileText} 
-                  label="Welcome Email Template (EXEC)" 
-                  href="https://storage.googleapis.com/boon-public-assets/Welcome_Email_Template_EXEC.pdf"
-                />
-              )}
-              {programs.some(p => p.type === 'GROW') && (
-                <ResourceLink 
-                  icon={FileText} 
-                  label="Welcome Email Template (GROW)" 
-                  href="https://storage.googleapis.com/boon-public-assets/Welcome_Email_Template_GROW.pdf"
-                />
-              )}
-              {programs.some(p => p.type === 'SCALE') && (
-                <ResourceLink 
-                  icon={FileText} 
-                  label="Welcome Email Template (SCALE)" 
-                  href="https://storage.googleapis.com/boon-public-assets/Welcome_Email_Template_SCALE.pdf"
-                />
-              )}
+              <ResourceLink
+                icon={Rocket}
+                label="Employee Launch Page"
+                href={getLaunchPageUrl()}
+              />
               <ResourceLink 
                 icon={Users} 
                 label="Manager Communication Guide" 
@@ -1400,6 +1385,84 @@ const SetupDashboard: React.FC = () => {
             saveLabel={saving === 'context' ? 'Saving...' : 'Save'}
             saveDisabled={saving === 'context'}
           />
+        </Modal>
+      )}
+
+      {/* Announcement Copy Modal */}
+      {showAnnouncementModal && (
+        <Modal title="Announcement Copy" subtitle="Share with your team to drive signups" onClose={() => setShowAnnouncementModal(false)}>
+          <div className="p-6 space-y-6">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-semibold text-gray-700">Slack Message</label>
+                <button
+                  onClick={async () => {
+                    const slackText = `Hey team! We're excited to announce that ${companyName.split(' - ')[0]} has partnered with Boon to offer free 1-on-1 coaching to help you grow as a leader. Sign up and book your first session here: ${window.location.origin}${getLaunchPageUrl()}`;
+                    await navigator.clipboard.writeText(slackText);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                    if (companyId) {
+                      await supabase
+                        .from('onboarding_tasks')
+                        .upsert({
+                          company_id: companyId,
+                          task_id: 'send_announcement',
+                          completed: true,
+                          completed_at: new Date().toISOString(),
+                        }, { onConflict: 'company_id,task_id' });
+                      setTaskCompletions(prev => ({ ...prev, send_announcement: true }));
+                    }
+                  }}
+                  className="px-3 py-1.5 text-xs font-medium text-boon-blue bg-boon-blue/10 rounded-lg hover:bg-boon-blue/20 transition-colors flex items-center gap-1"
+                >
+                  {copied ? <Check size={12} /> : <Copy size={12} />}
+                  {copied ? 'Copied!' : 'Copy'}
+                </button>
+              </div>
+              <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-700 leading-relaxed">
+                Hey team! We're excited to announce that {companyName.split(' - ')[0]} has partnered with Boon to offer free 1-on-1 coaching to help you grow as a leader. Sign up and book your first session here: {window.location.origin}{getLaunchPageUrl()}
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-semibold text-gray-700">Email One-liner</label>
+                <button
+                  onClick={async () => {
+                    const emailText = `${companyName.split(' - ')[0]} is now offering free professional coaching through Boon. Visit ${window.location.origin}${getLaunchPageUrl()} to learn more and book your first session.`;
+                    await navigator.clipboard.writeText(emailText);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                    if (companyId) {
+                      await supabase
+                        .from('onboarding_tasks')
+                        .upsert({
+                          company_id: companyId,
+                          task_id: 'send_announcement',
+                          completed: true,
+                          completed_at: new Date().toISOString(),
+                        }, { onConflict: 'company_id,task_id' });
+                      setTaskCompletions(prev => ({ ...prev, send_announcement: true }));
+                    }
+                  }}
+                  className="px-3 py-1.5 text-xs font-medium text-boon-blue bg-boon-blue/10 rounded-lg hover:bg-boon-blue/20 transition-colors flex items-center gap-1"
+                >
+                  {copied ? <Check size={12} /> : <Copy size={12} />}
+                  {copied ? 'Copied!' : 'Copy'}
+                </button>
+              </div>
+              <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-700 leading-relaxed">
+                {companyName.split(' - ')[0]} is now offering free professional coaching through Boon. Visit {window.location.origin}{getLaunchPageUrl()} to learn more and book your first session.
+              </div>
+            </div>
+          </div>
+          <div className="p-6 border-t border-gray-100 flex justify-end">
+            <button
+              onClick={() => setShowAnnouncementModal(false)}
+              className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+            >
+              Done
+            </button>
+          </div>
         </Modal>
       )}
 
