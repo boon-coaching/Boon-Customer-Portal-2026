@@ -1389,82 +1389,93 @@ const SetupDashboard: React.FC = () => {
       )}
 
       {/* Announcement Copy Modal */}
-      {showAnnouncementModal && (
-        <Modal title="Announcement Copy" subtitle="Share with your team to drive signups" onClose={() => setShowAnnouncementModal(false)}>
-          <div className="p-6 space-y-6">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-semibold text-gray-700">Slack Message</label>
-                <button
-                  onClick={async () => {
-                    const slackText = `Hey team! We're excited to announce that ${companyName.split(' - ')[0]} has partnered with Boon to offer free 1-on-1 coaching to help you grow as a leader. Sign up and book your first session here: ${getLaunchPageUrl()}`;
-                    await navigator.clipboard.writeText(slackText);
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 2000);
-                    if (companyId) {
-                      await supabase
-                        .from('onboarding_tasks')
-                        .upsert({
-                          company_id: companyId,
-                          task_id: 'send_announcement',
-                          completed: true,
-                          completed_at: new Date().toISOString(),
-                        }, { onConflict: 'company_id,task_id' });
-                      setTaskCompletions(prev => ({ ...prev, send_announcement: true }));
-                    }
-                  }}
-                  className="px-3 py-1.5 text-xs font-medium text-boon-blue bg-boon-blue/10 rounded-lg hover:bg-boon-blue/20 transition-colors flex items-center gap-1"
-                >
-                  {copied ? <Check size={12} /> : <Copy size={12} />}
-                  {copied ? 'Copied!' : 'Copy'}
+      {showAnnouncementModal && (() => {
+        const slackText = `Hey team -- we're rolling out a new benefit: free, confidential 1:1 coaching through Boon.\n\nYou get matched with a coach who's actually been in your shoes (former operators, not textbook coaches), plus an AI practice space where you can rehearse tough conversations before they happen, and your own personal development portal to track your growth over time.\n\nNo manager approval needed. Everything you discuss is 100% confidential.\n\nSign up takes 5 minutes: ${getLaunchPageUrl()}`;
+        const emailSubject = 'New benefit: free, confidential coaching through Boon';
+        const emailBody = `Hi team,\n\nI'm excited to share that we're launching a new professional development benefit: free 1:1 coaching through Boon.\n\nHere's what you get:\n- A personal coach matched to your role and goals (former executives and operators, not textbook coaches)\n- An AI-powered practice space to rehearse difficult conversations before they happen\n- Your own growth portal to track development over time\n- Session reminders through Slack so it fits into how you already work\n\nEverything is 100% confidential. Your manager and HR have zero visibility into what you discuss. No approval needed to sign up.\n\nLearn more and sign up here (takes 5 minutes): ${getLaunchPageUrl()}\n\n[Your name]`;
+        const markComplete = async () => {
+          if (companyId) {
+            await supabase
+              .from('onboarding_tasks')
+              .upsert({
+                company_id: companyId,
+                task_id: 'send_announcement',
+                completed: true,
+                completed_at: new Date().toISOString(),
+              }, { onConflict: 'company_id,task_id' });
+            setTaskCompletions(prev => ({ ...prev, send_announcement: true }));
+          }
+        };
+        return (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col">
+              <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Announcement Copy</h2>
+                  <p className="text-sm text-gray-500 mt-1">Share with your team to drive signups</p>
+                </div>
+                <button onClick={() => setShowAnnouncementModal(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <X size={20} className="text-gray-500" />
                 </button>
               </div>
-              <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-700 leading-relaxed">
-                Hey team! We're excited to announce that {companyName.split(' - ')[0]} has partnered with Boon to offer free 1-on-1 coaching to help you grow as a leader. Sign up and book your first session here: {getLaunchPageUrl()}
+              <div className="p-6 space-y-6 flex-1 overflow-y-auto">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-semibold text-gray-700">Slack Message</label>
+                    <button
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(slackText);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                        await markComplete();
+                      }}
+                      className="px-3 py-1.5 text-xs font-medium text-boon-blue bg-boon-blue/10 rounded-lg hover:bg-boon-blue/20 transition-colors flex items-center gap-1"
+                    >
+                      {copied ? <Check size={12} /> : <Copy size={12} />}
+                      {copied ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                    {slackText}
+                  </div>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-semibold text-gray-700">Email</label>
+                    <button
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(`Subject: ${emailSubject}\n\n${emailBody}`);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                        await markComplete();
+                      }}
+                      className="px-3 py-1.5 text-xs font-medium text-boon-blue bg-boon-blue/10 rounded-lg hover:bg-boon-blue/20 transition-colors flex items-center gap-1"
+                    >
+                      {copied ? <Check size={12} /> : <Copy size={12} />}
+                      {copied ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
+                  <div className="mb-2">
+                    <span className="text-xs font-medium text-gray-500 uppercase">Subject</span>
+                    <div className="p-2 bg-gray-50 rounded-lg text-sm text-gray-900 font-medium mt-1">{emailSubject}</div>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                    {emailBody}
+                  </div>
+                </div>
               </div>
-            </div>
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-semibold text-gray-700">Email One-liner</label>
+              <div className="p-6 border-t border-gray-100 flex justify-end">
                 <button
-                  onClick={async () => {
-                    const emailText = `${companyName.split(' - ')[0]} is now offering free professional coaching through Boon. Visit ${getLaunchPageUrl()} to learn more and book your first session.`;
-                    await navigator.clipboard.writeText(emailText);
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 2000);
-                    if (companyId) {
-                      await supabase
-                        .from('onboarding_tasks')
-                        .upsert({
-                          company_id: companyId,
-                          task_id: 'send_announcement',
-                          completed: true,
-                          completed_at: new Date().toISOString(),
-                        }, { onConflict: 'company_id,task_id' });
-                      setTaskCompletions(prev => ({ ...prev, send_announcement: true }));
-                    }
-                  }}
-                  className="px-3 py-1.5 text-xs font-medium text-boon-blue bg-boon-blue/10 rounded-lg hover:bg-boon-blue/20 transition-colors flex items-center gap-1"
+                  onClick={() => setShowAnnouncementModal(false)}
+                  className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
                 >
-                  {copied ? <Check size={12} /> : <Copy size={12} />}
-                  {copied ? 'Copied!' : 'Copy'}
+                  Done
                 </button>
-              </div>
-              <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-700 leading-relaxed">
-                {companyName.split(' - ')[0]} is now offering free professional coaching through Boon. Visit {getLaunchPageUrl()} to learn more and book your first session.
               </div>
             </div>
           </div>
-          <div className="p-6 border-t border-gray-100 flex justify-end">
-            <button
-              onClick={() => setShowAnnouncementModal(false)}
-              className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
-            >
-              Done
-            </button>
-          </div>
-        </Modal>
-      )}
+        );
+      })()}
 
       {/* Safe Sender Setup Modal */}
       {showAllowlistModal && (
