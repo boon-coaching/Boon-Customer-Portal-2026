@@ -1,8 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { isAdminUser } from '../constants';
 import { supabase } from '../lib/supabaseClient';
-import { ChevronRight, Calendar, Upload, Download, ExternalLink, CheckCircle2, Clock, Users, MessageSquare, FileText, Shield, CreditCard, Rocket, X, Copy, Mail, Check, Eye, Info, Database } from 'lucide-react';
+import { ChevronRight, Calendar, Upload, Download, ExternalLink, CheckCircle2, Clock, Users, MessageSquare, FileText, Shield, CreditCard, Rocket, X, Copy, Mail, Check, Eye, Info } from 'lucide-react';
 
 const TASK_CATEGORIES = [
   {
@@ -14,14 +14,6 @@ const TASK_CATEGORIES = [
       { id: 'upload_roster', label: 'Upload employee roster', actionLabel: 'Employees', actionType: 'link', actionUrl: '/employees' },
       { id: 'review_launch_page', label: 'Review employee launch page', actionLabel: 'View Page', actionType: 'preview_launch_page' },
       { id: 'send_announcement', label: 'Send announcement to your team', actionLabel: 'Get Copy', actionType: 'announcement_modal' },
-    ]
-  },
-  {
-    id: 'data_migration',
-    label: 'Data Migration',
-    icon: Database,
-    tasks: [
-      { id: 'migrate_legacy', label: 'Import legacy data from Google Sheets (contact your Boon team)', actionLabel: null, actionType: 'checkbox' },
     ]
   },
   {
@@ -194,11 +186,24 @@ const SetupDashboard: React.FC = () => {
     setTimeout(() => setSaveSuccess(null), 2000);
   };
 
+  const hasGrowOrExec = programs.some(p => p.type === 'EXEC' || p.type === 'GROW');
+
+  const filteredCategories = useMemo(() => {
+    if (hasGrowOrExec) return TASK_CATEGORIES;
+    return TASK_CATEGORIES.map(category => {
+      if (category.id !== 'program_config') return category;
+      return {
+        ...category,
+        tasks: category.tasks.filter(t => t.id !== 'select_focus_areas'),
+      };
+    });
+  }, [hasGrowOrExec]);
+
   // Auto-expand next incomplete category
   const expandNextIncompleteCategory = (currentCategoryId: string) => {
-    const currentIndex = TASK_CATEGORIES.findIndex(c => c.id === currentCategoryId);
-    for (let i = currentIndex + 1; i < TASK_CATEGORIES.length; i++) {
-      const category = TASK_CATEGORIES[i];
+    const currentIndex = filteredCategories.findIndex(c => c.id === currentCategoryId);
+    for (let i = currentIndex + 1; i < filteredCategories.length; i++) {
+      const category = filteredCategories[i];
       const hasIncomplete = category.tasks.some(t => !taskCompletions[t.id]);
       if (hasIncomplete) {
         setExpandedCategory(category.id);
@@ -207,7 +212,7 @@ const SetupDashboard: React.FC = () => {
     }
     // If no incomplete categories after current, check from beginning
     for (let i = 0; i < currentIndex; i++) {
-      const category = TASK_CATEGORIES[i];
+      const category = filteredCategories[i];
       const hasIncomplete = category.tasks.some(t => !taskCompletions[t.id]);
       if (hasIncomplete) {
         setExpandedCategory(category.id);
@@ -242,7 +247,7 @@ const SetupDashboard: React.FC = () => {
 
         if (compId) {
           const { data: completions } = await supabase
-            .from('onboarding_tasks')
+            .from('onboarding_steps')
             .select('task_id, completed, completed_at')
             .eq('company_id', compId);
           
@@ -365,7 +370,7 @@ const SetupDashboard: React.FC = () => {
 
       // Mark task complete
       const { error: taskError } = await supabase
-        .from('onboarding_tasks')
+        .from('onboarding_steps')
         .upsert({
           company_id: companyId,
           task_id: taskId,
@@ -397,7 +402,7 @@ const SetupDashboard: React.FC = () => {
 
     try {
       const { error } = await supabase
-        .from('onboarding_tasks')
+        .from('onboarding_steps')
         .upsert({
           company_id: companyId,
           task_id: taskId,
@@ -409,10 +414,11 @@ const SetupDashboard: React.FC = () => {
 
       if (error) {
         console.error('Error saving task:', error);
+        alert(`Failed to save: ${error.message || 'Unknown error'}. Please contact support if this persists.`);
         setTaskCompletions(prev => ({ ...prev, [taskId]: !newValue }));
       } else if (newValue) {
         // Check if current category is now complete and auto-expand next
-        const currentCategory = TASK_CATEGORIES.find(c => c.tasks.some(t => t.id === taskId));
+        const currentCategory = filteredCategories.find(c => c.tasks.some(t => t.id === taskId));
         if (currentCategory) {
           const updatedCompletions = { ...taskCompletions, [taskId]: true };
           const categoryComplete = currentCategory.tasks.every(t => updatedCompletions[t.id]);
@@ -429,8 +435,9 @@ const SetupDashboard: React.FC = () => {
     }
   };
 
-  const totalTasks = TASK_CATEGORIES.flatMap(c => c.tasks).length;
-  const completedTasks = Object.values(taskCompletions).filter(Boolean).length;
+  const allFilteredTasks = filteredCategories.flatMap(c => c.tasks);
+  const totalTasks = allFilteredTasks.length;
+  const completedTasks = allFilteredTasks.filter(t => taskCompletions[t.id]).length;
   const progressPct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
   const getCurrentStep = () => {
@@ -613,7 +620,7 @@ const SetupDashboard: React.FC = () => {
             </div>
             
             <div className="divide-y divide-gray-100">
-              {TASK_CATEGORIES.map((category) => {
+              {filteredCategories.map((category) => {
                 const categoryTasks = category.tasks;
                 const categoryComplete = categoryTasks.filter(t => taskCompletions[t.id]).length;
                 const isExpanded = expandedCategory === category.id;
@@ -715,6 +722,7 @@ const SetupDashboard: React.FC = () => {
           </div>
 
           {/* Development Focus Areas */}
+          {hasGrowOrExec && (
           <div id="focus-areas-section" className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
             <div className="p-6 border-b border-gray-100">
               <h2 className="text-lg font-bold text-gray-900">Development Focus Areas</h2>
@@ -889,7 +897,7 @@ const SetupDashboard: React.FC = () => {
                       }
 
                       const { error: taskError } = await supabase
-                        .from('onboarding_tasks')
+                        .from('onboarding_steps')
                         .upsert({
                           company_id: companyId,
                           task_id: 'select_focus_areas',
@@ -919,10 +927,11 @@ const SetupDashboard: React.FC = () => {
               </div>
             </div>
           </div>
+          )}
         </div>
 
         <div className="space-y-6">
-          
+
           <div className="bg-gradient-to-br from-boon-blue to-boon-darkBlue rounded-2xl p-6 text-white shadow-lg">
             <div className="flex items-center gap-2 mb-4">
               <Calendar size={18} className="text-blue-200" />
@@ -1124,7 +1133,7 @@ const SetupDashboard: React.FC = () => {
                 setShowDateModal(false);
 
                 const { error: taskError } = await supabase
-                  .from('onboarding_tasks')
+                  .from('onboarding_steps')
                   .upsert({
                     company_id: companyId,
                     task_id: 'schedule_launch',
@@ -1363,7 +1372,7 @@ const SetupDashboard: React.FC = () => {
                 setContextNotes(tempContextNotes);
 
                 const { error: taskError } = await supabase
-                  .from('onboarding_tasks')
+                  .from('onboarding_steps')
                   .upsert({
                     company_id: companyId,
                     task_id: 'company_context',
@@ -1396,7 +1405,7 @@ const SetupDashboard: React.FC = () => {
         const markComplete = async () => {
           if (companyId) {
             await supabase
-              .from('onboarding_tasks')
+              .from('onboarding_steps')
               .upsert({
                 company_id: companyId,
                 task_id: 'send_announcement',
@@ -1565,7 +1574,7 @@ const SetupDashboard: React.FC = () => {
                   // Mark task complete
                   if (companyId) {
                     await supabase
-                      .from('onboarding_tasks')
+                      .from('onboarding_steps')
                       .upsert({
                         company_id: companyId,
                         task_id: 'share_allowlist',

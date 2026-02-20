@@ -111,21 +111,21 @@ CREATE POLICY "tenant_isolation_select" ON focus_area_selections
   );
 
 -- ============================================================================
--- onboarding_tasks: SELECT, INSERT, UPDATE (supports UPSERT via onConflict)
+-- onboarding_steps: SELECT, INSERT, UPDATE (supports UPSERT via onConflict)
 -- Used by: SetupDashboard - tracks company onboarding task completion
 -- ============================================================================
 
-CREATE POLICY "tenant_isolation_select" ON onboarding_tasks
+CREATE POLICY "tenant_isolation_select" ON onboarding_steps
   FOR SELECT USING (
     company_id = (auth.jwt()->'app_metadata'->>'company_id')::uuid
   );
 
-CREATE POLICY "tenant_isolation_insert" ON onboarding_tasks
+CREATE POLICY "tenant_isolation_insert" ON onboarding_steps
   FOR INSERT WITH CHECK (
     company_id = (auth.jwt()->'app_metadata'->>'company_id')::uuid
   );
 
-CREATE POLICY "tenant_isolation_update" ON onboarding_tasks
+CREATE POLICY "tenant_isolation_update" ON onboarding_steps
   FOR UPDATE USING (
     company_id = (auth.jwt()->'app_metadata'->>'company_id')::uuid
   );

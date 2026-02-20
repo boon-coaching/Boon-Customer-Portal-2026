@@ -43,9 +43,9 @@ ALTER TABLE focus_area_selections FORCE ROW LEVEL SECURITY;
 ALTER TABLE portal_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE portal_events FORCE ROW LEVEL SECURITY;
 
--- onboarding_tasks: Company onboarding task completion tracking
-ALTER TABLE onboarding_tasks ENABLE ROW LEVEL SECURITY;
-ALTER TABLE onboarding_tasks FORCE ROW LEVEL SECURITY;
+-- onboarding_steps: Company onboarding task completion tracking
+ALTER TABLE onboarding_steps ENABLE ROW LEVEL SECURITY;
+ALTER TABLE onboarding_steps FORCE ROW LEVEL SECURITY;
 
 -- manager_surveys: Manager-submitted surveys about employees
 ALTER TABLE manager_surveys ENABLE ROW LEVEL SECURITY;

@@ -64,8 +64,8 @@ CREATE POLICY "admin_full_access" ON portal_events
     auth.jwt()->'app_metadata'->>'role' = 'admin'
   );
 
--- onboarding_tasks: Admin full access
-CREATE POLICY "admin_full_access" ON onboarding_tasks
+-- onboarding_steps: Admin full access
+CREATE POLICY "admin_full_access" ON onboarding_steps
   FOR ALL USING (
     auth.jwt()->'app_metadata'->>'role' = 'admin'
   );

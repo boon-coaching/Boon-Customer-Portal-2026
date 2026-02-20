@@ -39,10 +39,10 @@ DROP POLICY IF EXISTS "tenant_isolation_select" ON competency_scores;
 -- focus_area_selections
 DROP POLICY IF EXISTS "tenant_isolation_select" ON focus_area_selections;
 
--- onboarding_tasks
-DROP POLICY IF EXISTS "tenant_isolation_select" ON onboarding_tasks;
-DROP POLICY IF EXISTS "tenant_isolation_insert" ON onboarding_tasks;
-DROP POLICY IF EXISTS "tenant_isolation_update" ON onboarding_tasks;
+-- onboarding_steps
+DROP POLICY IF EXISTS "tenant_isolation_select" ON onboarding_steps;
+DROP POLICY IF EXISTS "tenant_isolation_insert" ON onboarding_steps;
+DROP POLICY IF EXISTS "tenant_isolation_update" ON onboarding_steps;
 
 -- company_account_team
 DROP POLICY IF EXISTS "tenant_isolation_select" ON company_account_team;
@@ -84,7 +84,7 @@ DROP POLICY IF EXISTS "admin_full_access" ON welcome_survey_scale;
 DROP POLICY IF EXISTS "admin_full_access" ON competency_scores;
 DROP POLICY IF EXISTS "admin_full_access" ON focus_area_selections;
 DROP POLICY IF EXISTS "admin_full_access" ON portal_events;
-DROP POLICY IF EXISTS "admin_full_access" ON onboarding_tasks;
+DROP POLICY IF EXISTS "admin_full_access" ON onboarding_steps;
 DROP POLICY IF EXISTS "admin_full_access" ON manager_surveys;
 DROP POLICY IF EXISTS "admin_full_access" ON company_logos;
 DROP POLICY IF EXISTS "admin_full_access" ON company_account_team;

@@ -16,7 +16,7 @@
 -- Tables covered (14 tables + 1 view):
 --   employee_manager, session_tracking, survey_submissions, program_config,
 --   welcome_survey_baseline, welcome_survey_scale, competency_scores,
---   focus_area_selections, portal_events, onboarding_tasks, manager_surveys,
+--   focus_area_selections, portal_events, onboarding_steps, manager_surveys,
 --   company_logos, company_account_team, boon_benchmarks
 --   (competency_pre_post is a VIEW - protected via underlying tables)
 -- ============================================================================
@@ -49,9 +49,9 @@ DROP POLICY IF EXISTS "tenant_isolation_select" ON competency_scores;
 
 DROP POLICY IF EXISTS "tenant_isolation_select" ON focus_area_selections;
 
-DROP POLICY IF EXISTS "tenant_isolation_select" ON onboarding_tasks;
-DROP POLICY IF EXISTS "tenant_isolation_insert" ON onboarding_tasks;
-DROP POLICY IF EXISTS "tenant_isolation_update" ON onboarding_tasks;
+DROP POLICY IF EXISTS "tenant_isolation_select" ON onboarding_steps;
+DROP POLICY IF EXISTS "tenant_isolation_insert" ON onboarding_steps;
+DROP POLICY IF EXISTS "tenant_isolation_update" ON onboarding_steps;
 
 DROP POLICY IF EXISTS "tenant_isolation_select" ON company_account_team;
 
@@ -82,7 +82,7 @@ DROP POLICY IF EXISTS "admin_full_access" ON welcome_survey_scale;
 DROP POLICY IF EXISTS "admin_full_access" ON competency_scores;
 DROP POLICY IF EXISTS "admin_full_access" ON focus_area_selections;
 DROP POLICY IF EXISTS "admin_full_access" ON portal_events;
-DROP POLICY IF EXISTS "admin_full_access" ON onboarding_tasks;
+DROP POLICY IF EXISTS "admin_full_access" ON onboarding_steps;
 DROP POLICY IF EXISTS "admin_full_access" ON manager_surveys;
 DROP POLICY IF EXISTS "admin_full_access" ON company_logos;
 DROP POLICY IF EXISTS "admin_full_access" ON company_account_team;
@@ -120,8 +120,8 @@ ALTER TABLE focus_area_selections FORCE ROW LEVEL SECURITY;
 ALTER TABLE portal_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE portal_events FORCE ROW LEVEL SECURITY;
 
-ALTER TABLE onboarding_tasks ENABLE ROW LEVEL SECURITY;
-ALTER TABLE onboarding_tasks FORCE ROW LEVEL SECURITY;
+ALTER TABLE onboarding_steps ENABLE ROW LEVEL SECURITY;
+ALTER TABLE onboarding_steps FORCE ROW LEVEL SECURITY;
 
 ALTER TABLE manager_surveys ENABLE ROW LEVEL SECURITY;
 ALTER TABLE manager_surveys FORCE ROW LEVEL SECURITY;
@@ -208,18 +208,18 @@ CREATE POLICY "tenant_isolation_select" ON focus_area_selections
     company_id = (auth.jwt()->'app_metadata'->>'company_id')::uuid
   );
 
--- onboarding_tasks: SELECT, INSERT, UPDATE
-CREATE POLICY "tenant_isolation_select" ON onboarding_tasks
+-- onboarding_steps: SELECT, INSERT, UPDATE
+CREATE POLICY "tenant_isolation_select" ON onboarding_steps
   FOR SELECT USING (
     company_id = (auth.jwt()->'app_metadata'->>'company_id')::uuid
   );
 
-CREATE POLICY "tenant_isolation_insert" ON onboarding_tasks
+CREATE POLICY "tenant_isolation_insert" ON onboarding_steps
   FOR INSERT WITH CHECK (
     company_id = (auth.jwt()->'app_metadata'->>'company_id')::uuid
   );
 
-CREATE POLICY "tenant_isolation_update" ON onboarding_tasks
+CREATE POLICY "tenant_isolation_update" ON onboarding_steps
   FOR UPDATE USING (
     company_id = (auth.jwt()->'app_metadata'->>'company_id')::uuid
   );
@@ -347,7 +347,7 @@ CREATE POLICY "admin_full_access" ON focus_area_selections
 CREATE POLICY "admin_full_access" ON portal_events
   FOR ALL USING (auth.jwt()->'app_metadata'->>'role' = 'admin');
 
-CREATE POLICY "admin_full_access" ON onboarding_tasks
+CREATE POLICY "admin_full_access" ON onboarding_steps
   FOR ALL USING (auth.jwt()->'app_metadata'->>'role' = 'admin');
 
 CREATE POLICY "admin_full_access" ON manager_surveys
