@@ -95,12 +95,11 @@ export const getEmployeeRoster = async (filter?: CompanyFilter): Promise<Employe
     .neq('company_email', 'asimmons@boon-health.com');
 
   // Apply company filter at query level
-  // For multi-location: accountName takes precedence if set
-  // Note: employee_manager uses 'company_name' not 'account_name'
-  if (filter?.accountName) {
-    query = query.ilike('company_name', `%${filter.accountName}%`);
-  } else if (filter?.companyId) {
+  // companyId is preferred (indexed, exact match); accountName is fallback
+  if (filter?.companyId) {
     query = query.eq('company_id', filter.companyId);
+  } else if (filter?.accountName) {
+    query = query.ilike('company_name', `%${filter.accountName}%`);
   }
 
   // Optional program title filter
@@ -154,14 +153,11 @@ export const getDashboardSessions = async (filter?: CompanyFilter): Promise<Sess
       .select('*');
 
     // Apply company filter at query level
-    // For multi-location: accountName takes precedence if set (filters to specific location)
-    // For single-company: use companyId for exact match
-    if (filter?.accountName) {
-      // Multi-location account - filter to specific location
-      query = query.ilike('account_name', `%${filter.accountName}%`);
-    } else if (filter?.companyId) {
-      // Single company account - get all data for this company
+    // companyId is preferred (indexed, exact match); accountName is fallback
+    if (filter?.companyId) {
       query = query.eq('company_id', filter.companyId);
+    } else if (filter?.accountName) {
+      query = query.ilike('account_name', `%${filter.accountName}%`);
     }
 
     // Optional program title filter
