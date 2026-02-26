@@ -296,7 +296,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
     // Get BETTER testimonials - filter for impactful quotes
     setProgress('Selecting best testimonials...');
     const allTestimonials = surveys
-      .flatMap(s => [(s as any).feedback_learned, (s as any).feedback_insight])
+      .flatMap(s => [(s as any).feedback_learned, (s as any).feedback_insight, (s as any).feedback_suggestions])
       .filter(t => t && typeof t === 'string')
       .filter(t => {
         // Must be substantial (50+ chars)
