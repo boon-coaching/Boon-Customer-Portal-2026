@@ -43,7 +43,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState('');
-  const [dateRange, setDateRange] = useState<'all' | 'q4' | 'q3' | 'ytd'>('all');
+  const [dateRange, setDateRange] = useState<'all' | 'q4' | 'q3' | 'ytd' | '2025'>('all');
   const [selectedProgram, setSelectedProgram] = useState<string>('all');
   const [programs, setPrograms] = useState<string[]>([]);
 
@@ -167,26 +167,44 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
     });
     const uniqueEmployees = new Set(sessions.map(s => (s as any).employee_name?.toLowerCase()).filter(Boolean)).size;
     
-    // Calculate monthly trend (last 6 months)
-    const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-    
-    const monthlyMap = new Map<string, number>();
-    for (let i = 0; i < 6; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
-      const key = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-      monthlyMap.set(key, 0);
+    // Calculate monthly trend based on selected date range
+    let trendStart: Date;
+    let trendEnd: Date;
+
+    if (dateRange === '2025') {
+      trendStart = new Date(2025, 0, 1);
+      trendEnd = new Date(2025, 11, 1);
+    } else if (dateRange === 'ytd') {
+      trendStart = new Date(now.getFullYear(), 0, 1);
+      trendEnd = new Date(now.getFullYear(), now.getMonth(), 1);
+    } else if (dateRange === 'q4') {
+      trendStart = new Date(2024, 9, 1);
+      trendEnd = new Date(2024, 11, 1);
+    } else if (dateRange === 'q3') {
+      trendStart = new Date(2024, 6, 1);
+      trendEnd = new Date(2024, 8, 1);
+    } else {
+      // 'all' - last 12 months
+      trendStart = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+      trendEnd = new Date(now.getFullYear(), now.getMonth(), 1);
     }
-    
+
+    const monthlyMap = new Map<string, number>();
+    const cursor = new Date(trendStart);
+    while (cursor <= trendEnd) {
+      const key = cursor.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+      monthlyMap.set(key, 0);
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+
     billableSessions.forEach(s => {
       const date = new Date((s as any).session_date);
-      if (date >= sixMonthsAgo) {
-        const key = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-        if (monthlyMap.has(key)) {
-          monthlyMap.set(key, (monthlyMap.get(key) || 0) + 1);
-        }
+      const key = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+      if (monthlyMap.has(key)) {
+        monthlyMap.set(key, (monthlyMap.get(key) || 0) + 1);
       }
     });
-    
+
     const monthlyTrend = Array.from(monthlyMap.entries()).map(([month, count]) => ({ month, count }));
     
     // Extract coaching themes
@@ -257,8 +275,9 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
     // Fetch satisfaction data - already filtered by company at query level
     setProgress('Gathering satisfaction scores...');
     const allSurveys = await getSurveyResponses(companyFilter);
-    const surveys = allSurveys.filter(s => 
-      matchesProgram((s as any).program_title)
+    const surveys = allSurveys.filter(s =>
+      matchesProgram((s as any).program_title) &&
+      matchesDateRange((s as any).created_at)
     );
     
     const npsScores = surveys.map(s => (s as any).nps).filter(n => n != null);
@@ -280,10 +299,8 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
       .flatMap(s => [(s as any).feedback_learned, (s as any).feedback_insight])
       .filter(t => t && typeof t === 'string')
       .filter(t => {
-        // Must be substantial (150+ chars)
-        if (t.length < 150) return false;
-        // Must be a complete thought (has punctuation)
-        if (!/[.!?]/.test(t)) return false;
+        // Must be substantial (50+ chars)
+        if (t.length < 50) return false;
         return true;
       })
       .sort((a, b) => {
@@ -535,13 +552,19 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
       pdf.setTextColor(31, 41, 55);
       pdf.setFontSize(11);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Billable Sessions Trend (Last 6 Months)', margin, y);
+      const trendTitle = dateRange === '2025' ? 'Billable Sessions Trend (2025)'
+        : dateRange === 'ytd' ? `Billable Sessions Trend (${new Date().getFullYear()} YTD)`
+        : dateRange === 'q4' ? 'Billable Sessions Trend (Q4 2024)'
+        : dateRange === 'q3' ? 'Billable Sessions Trend (Q3 2024)'
+        : 'Billable Sessions Trend (Last 12 Months)';
+      pdf.text(trendTitle, margin, y);
       y += 5;
       
       const chartHeight = 28;
       const chartWidth = pageWidth - 2 * margin;
-      const barSpacing = chartWidth / 6;
-      const singleBarWidth = 16;
+      const monthCount = data.sessions.monthlyTrend.length || 1;
+      const barSpacing = chartWidth / monthCount;
+      const singleBarWidth = Math.min(16, barSpacing - 4);
       const maxCount = Math.max(...data.sessions.monthlyTrend.map(m => m.count), 1);
       
       drawRect(margin, y, chartWidth, chartHeight, '#F9FAFB', 3);
@@ -998,17 +1021,19 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
                 </div>
               </button>
 
-              <button
-                onClick={generateSessionCSV}
-                disabled={loading}
-                className="w-full px-4 py-3 bg-green-600 rounded-lg text-sm font-medium text-white hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
-              >
-                <Table className="w-5 h-5" />
-                <div className="text-left">
-                  <div className="font-semibold">Session Tracker (CSV)</div>
-                  <div className="text-xs text-green-200">Detailed session list for billing & invoicing</div>
-                </div>
-              </button>
+              {programType?.toUpperCase() !== 'SCALE' && (
+                <button
+                  onClick={generateSessionCSV}
+                  disabled={loading}
+                  className="w-full px-4 py-3 bg-green-600 rounded-lg text-sm font-medium text-white hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
+                >
+                  <Table className="w-5 h-5" />
+                  <div className="text-left">
+                    <div className="font-semibold">Session Tracker (CSV)</div>
+                    <div className="text-xs text-green-200">Detailed session list for billing & invoicing</div>
+                  </div>
+                </button>
+              )}
 
               <button
                 onClick={() => setIsOpen(false)}

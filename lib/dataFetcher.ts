@@ -505,6 +505,8 @@ export const getSurveyResponses = async (filter?: CompanyFilter): Promise<Survey
     wellbeing_balance: d.wellbeing_balance,
     // First session survey fields
     match_experience: d.match_experience,
+    // Timestamp for date filtering
+    created_at: d.created_at,
   })) as SurveyResponse[];
 };
 

@@ -228,6 +228,8 @@ export interface SurveyResponse {
   wellbeing_balance?: number;
   // First session survey fields
   match_experience?: number;
+  // Timestamp for date filtering
+  created_at?: string;
 }
 
 /**
