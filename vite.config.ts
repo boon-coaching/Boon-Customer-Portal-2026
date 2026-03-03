@@ -7,12 +7,12 @@ export default defineConfig(({ mode }) => {
     return {
       server: {
         port: 3000,
-        host: '0.0.0.0',
+        // Bind to localhost only. Never expose dev server to 0.0.0.0.
       },
       plugins: [react()],
       define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
+        // SECURITY: Do NOT expose API keys to the client bundle via define.
+        // Move Gemini calls to a server-side API route instead.
       },
       resolve: {
         alias: {
