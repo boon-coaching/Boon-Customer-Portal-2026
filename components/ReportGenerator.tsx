@@ -783,10 +783,16 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
       // Fetch sessions
       const allSessions = await getDashboardSessions(companyFilter);
 
-      // Filter by program and date range
+      // Filter by program, date range, and exclude non-billable statuses
       const filteredSessions = allSessions.filter(s => {
         const sessionDate = (s as any).session_date;
         const programTitle = (s as any).program_title;
+        const status = ((s as any).status || '').toLowerCase();
+
+        // Exclude cancelled and scheduled sessions
+        if (status === 'cancelled' || status === 'canceled' || status === 'scheduled' || status === 'rescheduled') {
+          return false;
+        }
 
         // Program filter
         if (selectedProgram !== 'all' && programTitle !== selectedProgram) {
