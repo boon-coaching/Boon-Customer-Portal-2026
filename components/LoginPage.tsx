@@ -54,7 +54,10 @@ const LoginPage: React.FC = () => {
 
       navigate('/');
     } catch (err: any) {
-      setError(err.message || 'Failed to sign in');
+      const message = typeof err?.message === 'string' && err.message.trim()
+        ? err.message
+        : 'Unable to sign in. Please check your connection and try again.';
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -102,7 +105,10 @@ const LoginPage: React.FC = () => {
       setFirstName('');
       setLastName('');
     } catch (err: any) {
-      setError(err.message || 'Failed to create account');
+      const message = typeof err?.message === 'string' && err.message.trim()
+        ? err.message
+        : 'Unable to create account. Please check your connection and try again.';
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -124,7 +130,10 @@ const LoginPage: React.FC = () => {
 
       setSuccess('Password reset email sent! Check your inbox.');
     } catch (err: any) {
-      setError(err.message || 'Failed to send reset email');
+      const message = typeof err?.message === 'string' && err.message.trim()
+        ? err.message
+        : 'Unable to send reset email. Please check your connection and try again.';
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -146,7 +155,10 @@ const LoginPage: React.FC = () => {
         throw error;
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to sign in with Google');
+      const message = typeof err?.message === 'string' && err.message.trim()
+        ? err.message
+        : 'Unable to sign in with Google. Please check your connection and try again.';
+      setError(message);
       setGoogleLoading(false);
     }
   };
