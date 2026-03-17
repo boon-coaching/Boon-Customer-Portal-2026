@@ -948,6 +948,7 @@ const EmployeeModal = ({
             company_id: companyId,
             job_title: cleanedData.job_title || undefined,
             company_name: companyName,
+            program: cleanedData.program || undefined,
           })
         });
         const fnData = await res.json();
@@ -1439,6 +1440,7 @@ const BatchUploadModal = ({
             company_id: companyId,
             job_title: row.job_title || undefined,
             company_name: companyName,
+            program: row.program || undefined,
           })
         });
         const fnData = await res.json();
