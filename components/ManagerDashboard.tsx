@@ -21,7 +21,7 @@ interface Employee {
   company_email: string;
   job_title: string | null;
   department: string | null;
-  program: string | null;
+  coaching_program: string | null;
   status: string | null;
   start_date: string | null;
 }
@@ -289,7 +289,7 @@ const ManagerDashboard: React.FC = () => {
                       <div>
                         <p className="font-medium text-gray-900">{fullName}</p>
                         <p className="text-sm text-gray-500">
-                          {employee.job_title || employee.program || 'No title'}
+                          {employee.job_title || employee.coaching_program || 'No title'}
                         </p>
                       </div>
                     </div>
@@ -408,7 +408,7 @@ const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
               </div>
               <div>
                 <h2 className="text-xl font-bold text-gray-900">{fullName}</h2>
-                <p className="text-gray-500">{employee.job_title || employee.program || 'Team Member'}</p>
+                <p className="text-gray-500">{employee.job_title || employee.coaching_program || 'Team Member'}</p>
               </div>
             </div>
             <button
@@ -435,7 +435,7 @@ const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
               <p className="text-sm text-gray-500">Status</p>
             </div>
             <div className="bg-gray-50 rounded-lg p-4 text-center">
-              <p className="text-2xl font-bold text-gray-900">{employee.program || '—'}</p>
+              <p className="text-2xl font-bold text-gray-900">{employee.coaching_program || '—'}</p>
               <p className="text-sm text-gray-500">Program</p>
             </div>
           </div>

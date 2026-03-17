@@ -500,7 +500,7 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
       if (existingKey) {
         // Merge with existing - prefer the one with a program assigned
         const existing = statsMap.get(existingKey)!;
-        const newProgram = (emp as any).program_title || emp.program || emp.program_name || 'Unassigned';
+        const newProgram = emp.coaching_program || emp.program_name || 'Unassigned';
         if (existing.program === 'Unassigned' && newProgram !== 'Unassigned') {
           existing.program = newProgram;
           existing.cohort = emp.cohort || emp.program_name || existing.cohort;
@@ -519,7 +519,7 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
         statsMap.set(key, {
           id: emp.id,
           name: name,
-          program: (emp as any).program_title || emp.program || emp.program_name || 'Unassigned',
+          program: emp.coaching_program || emp.program_name || 'Unassigned',
           cohort: emp.cohort || emp.program_name || '', 
           avatar_url: emp.avatar_url,
           completed: 0,
