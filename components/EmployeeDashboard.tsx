@@ -932,8 +932,15 @@ const EmployeeModal = ({
 
       } else if (isAdd) {
         // Create SF Contact + employee_manager row via edge function
-        const { data: fnData, error: fnError } = await supabase.functions.invoke('portal-employee-sync', {
-          body: {
+        const { data: { session } } = await supabase.auth.getSession();
+        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/portal-employee-sync`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`,
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
             action: 'add',
             email: cleanedData.company_email,
             first_name: cleanedData.first_name,
@@ -941,10 +948,10 @@ const EmployeeModal = ({
             company_id: companyId,
             job_title: cleanedData.job_title || undefined,
             company_name: companyName,
-          }
+          })
         });
-        if (fnError) throw fnError;
-        if (fnData?.error) throw new Error(fnData.error);
+        const fnData = await res.json();
+        if (!res.ok || fnData.error) throw new Error(fnData.error || `Request failed: ${res.status}`);
 
         // Refetch the full row for the UI
         const { data, error } = await supabase
@@ -969,15 +976,22 @@ const EmployeeModal = ({
         onSave(data, 'update');
       } else if (isTerminate) {
         // Terminate in SF + employee_manager via edge function
-        const { data: fnData, error: fnError } = await supabase.functions.invoke('portal-employee-sync', {
-          body: {
+        const { data: { session: termSession } } = await supabase.auth.getSession();
+        const termRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/portal-employee-sync`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${termSession?.access_token}`,
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
             action: 'deactivate',
             email: employee!.company_email,
             company_id: companyId,
-          }
+          })
         });
-        if (fnError) throw fnError;
-        if (fnData?.error) throw new Error(fnData.error);
+        const termData = await termRes.json();
+        if (!termRes.ok || termData.error) throw new Error(termData.error || `Request failed: ${termRes.status}`);
 
         // Refetch updated row for UI
         const { data, error } = await supabase
@@ -1404,13 +1418,20 @@ const BatchUploadModal = ({
 
     const succeeded: any[] = [];
     const failed: string[] = [];
+    const { data: { session: batchSession } } = await supabase.auth.getSession();
 
     for (let i = 0; i < mappedData.length; i++) {
       const row = mappedData[i];
       setUploadProgress({ current: i + 1, total: mappedData.length });
       try {
-        const { data: fnData, error: fnError } = await supabase.functions.invoke('portal-employee-sync', {
-          body: {
+        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/portal-employee-sync`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${batchSession?.access_token}`,
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
             action: 'add',
             email: row.company_email,
             first_name: row.first_name,
@@ -1418,10 +1439,10 @@ const BatchUploadModal = ({
             company_id: companyId,
             job_title: row.job_title || undefined,
             company_name: companyName,
-          }
+          })
         });
-        if (fnError) throw fnError;
-        if (fnData?.error) throw new Error(fnData.error);
+        const fnData = await res.json();
+        if (!res.ok || fnData.error) throw new Error(fnData.error || `Request failed: ${res.status}`);
 
         const { data, error } = await supabase
           .from('employee_manager')
