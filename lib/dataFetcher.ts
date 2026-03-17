@@ -102,9 +102,9 @@ export const getEmployeeRoster = async (filter?: CompanyFilter): Promise<Employe
     query = query.ilike('company_name', `%${filter.accountName}%`);
   }
 
-  // Optional program title filter
+  // Optional program filter
   if (filter?.programTitle) {
-    query = query.eq('program_title', filter.programTitle);
+    query = query.eq('coaching_program', filter.programTitle);
   }
 
   const { data, error } = await query.order('last_name', { ascending: true });

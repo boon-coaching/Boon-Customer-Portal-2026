@@ -25,8 +25,7 @@ interface Employee {
   last_name: string;
   company_email: string;
   company_name: string;
-  program: string;
-  program_title?: string;
+  coaching_program: string;
   salesforce_program_id?: string;
   department: string;
   job_title: string;
@@ -205,11 +204,10 @@ const EmployeeDashboard: React.FC = () => {
           });
         }
         
-        // Map program_title from existing fields
+        // Normalize coaching_program for display
         filteredData = filteredData.map(e => ({
           ...e,
-          program_title: e.coaching_program || e.program || undefined,
-          program: e.coaching_program || e.program
+          coaching_program: e.coaching_program || ''
         }));
         
         setEmployees(filteredData);
@@ -226,7 +224,7 @@ const EmployeeDashboard: React.FC = () => {
 
   // Get unique programs for filter (prefer program_title)
   const programs = useMemo(() => {
-    const uniquePrograms = [...new Set(employees.map(e => e.program_title || e.program).filter(Boolean))];
+    const uniquePrograms = [...new Set(employees.map(e => e.coaching_program).filter(Boolean))];
     return ['All', ...uniquePrograms.sort()];
   }, [employees]);
 
@@ -237,7 +235,7 @@ const EmployeeDashboard: React.FC = () => {
         const matchesSearch = 
           `${emp.first_name} ${emp.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
           emp.company_email?.toLowerCase().includes(searchTerm.toLowerCase());
-        const empProgram = emp.program_title || emp.program;
+        const empProgram = emp.coaching_program;
         const matchesProgram = filterProgram === 'All' || empProgram === filterProgram;
         return matchesSearch && matchesProgram;
       })
@@ -256,7 +254,7 @@ const EmployeeDashboard: React.FC = () => {
   const programFilteredEmployees = useMemo(() => {
     if (filterProgram === 'All') return employees;
     return employees.filter(emp => {
-      const empProgram = emp.program_title || emp.program;
+      const empProgram = emp.coaching_program;
       return empProgram === filterProgram;
     });
   }, [employees, filterProgram]);
@@ -649,9 +647,9 @@ const EmployeeDashboard: React.FC = () => {
                     <div className="text-sm text-gray-600 mb-3 space-y-1">
                        <p className="truncate">{emp.company_email}</p>
                        <div className="flex items-center gap-2">
-                          {(emp.program_title || emp.program) && (
+                          {(emp.coaching_program) && (
                              <span className="px-2 py-0.5 rounded text-xs font-bold bg-boon-blue/10 text-boon-blue">
-                               {emp.program_title || emp.program}
+                               {emp.coaching_program}
                              </span>
                           )}
                           <span className="text-gray-400">•</span>
@@ -739,9 +737,9 @@ const EmployeeDashboard: React.FC = () => {
                         <span className="text-gray-600 text-sm">{emp.company_email || '-'}</span>
                       </td>
                       <td className="px-6 py-4">
-                        {(emp.program_title || emp.program) ? (
+                        {(emp.coaching_program) ? (
                           <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-boon-blue/10 text-boon-blue">
-                            {emp.program_title || emp.program}
+                            {emp.coaching_program}
                           </span>
                         ) : (
                           <span className="text-gray-300">-</span>
@@ -860,7 +858,7 @@ const EmployeeModal = ({
     first_name: employee?.first_name || '',
     last_name: employee?.last_name || '',
     company_email: employee?.company_email || '',
-    program: employee?.program || '',
+    program: employee?.coaching_program || '',
     department: employee?.department || '',
     job_title: employee?.job_title || '',
     company_role: employee?.company_role || '',
@@ -1807,7 +1805,7 @@ const DuplicateMergeModal = ({
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Program</span>
-                    <span className="text-gray-900">{emp.program_title || emp.program || '-'}</span>
+                    <span className="text-gray-900">{emp.coaching_program || '-'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Status</span>

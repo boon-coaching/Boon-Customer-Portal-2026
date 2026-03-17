@@ -3,8 +3,8 @@ export interface Employee {
   first_name: string;
   last_name: string;
   email: string;
-  program: string;
-  
+  coaching_program: string;
+
   // Extended properties
   avatar_url?: string;
   full_name?: string;
