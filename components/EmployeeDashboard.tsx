@@ -1295,8 +1295,10 @@ const BatchUploadModal = ({
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [step, setStep] = useState<'upload' | 'map' | 'preview'>('upload');
+  const [step, setStep] = useState<'upload' | 'map' | 'preview' | 'done'>('upload');
   const [dragActive, setDragActive] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
+  const [uploadResults, setUploadResults] = useState<{ succeeded: any[]; failed: string[] }>({ succeeded: [], failed: [] });
 
   const requiredFields = ['first_name', 'last_name', 'company_email'];
   const optionalFields = ['program', 'department', 'job_title', 'company_role', 'start_date'];
@@ -1398,52 +1400,44 @@ const BatchUploadModal = ({
 
     setUploading(true);
     setError(null);
+    setUploadProgress({ current: 0, total: mappedData.length });
 
-    try {
-      const results: any[] = [];
-      const errors: string[] = [];
+    const succeeded: any[] = [];
+    const failed: string[] = [];
 
-      for (const row of mappedData) {
-        try {
-          const { data: fnData, error: fnError } = await supabase.functions.invoke('portal-employee-sync', {
-            body: {
-              action: 'add',
-              email: row.company_email,
-              first_name: row.first_name,
-              last_name: row.last_name,
-              company_id: companyId,
-              job_title: row.job_title || undefined,
-              company_name: companyName,
-            }
-          });
-          if (fnError) throw fnError;
-          if (fnData?.error) throw new Error(fnData.error);
+    for (let i = 0; i < mappedData.length; i++) {
+      const row = mappedData[i];
+      setUploadProgress({ current: i + 1, total: mappedData.length });
+      try {
+        const { data: fnData, error: fnError } = await supabase.functions.invoke('portal-employee-sync', {
+          body: {
+            action: 'add',
+            email: row.company_email,
+            first_name: row.first_name,
+            last_name: row.last_name,
+            company_id: companyId,
+            job_title: row.job_title || undefined,
+            company_name: companyName,
+          }
+        });
+        if (fnError) throw fnError;
+        if (fnData?.error) throw new Error(fnData.error);
 
-          // Refetch the full row
-          const { data, error } = await supabase
-            .from('employee_manager')
-            .select()
-            .eq('id', fnData.employee_id)
-            .single();
-          if (error) throw error;
-          results.push(data);
-        } catch (rowErr: any) {
-          errors.push(`${row.first_name} ${row.last_name} (${row.company_email}): ${rowErr.message}`);
-        }
+        const { data, error } = await supabase
+          .from('employee_manager')
+          .select()
+          .eq('id', fnData.employee_id)
+          .single();
+        if (error) throw error;
+        succeeded.push(data);
+      } catch (rowErr: any) {
+        failed.push(`${row.first_name} ${row.last_name} (${row.company_email}): ${rowErr.message}`);
       }
-
-      if (results.length > 0) {
-        onSuccess(results);
-      }
-      if (errors.length > 0) {
-        setError(`${results.length} of ${mappedData.length} employees added. Failed:\n${errors.join('\n')}`);
-      }
-    } catch (err: any) {
-      console.error('Batch upload error:', err);
-      setError(err.message || 'Failed to upload employees');
-    } finally {
-      setUploading(false);
     }
+
+    setUploadResults({ succeeded, failed });
+    setUploading(false);
+    setStep('done');
   };
 
   const validRows = getMappedData();
@@ -1635,7 +1629,7 @@ const BatchUploadModal = ({
                   {uploading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Uploading...
+                      Adding {uploadProgress.current} of {uploadProgress.total}...
                     </>
                   ) : (
                     <>
@@ -1643,6 +1637,44 @@ const BatchUploadModal = ({
                       Upload {validRows.length} Employees
                     </>
                   )}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 'done' && (
+            <div className="space-y-4">
+              {uploadResults.succeeded.length > 0 && (
+                <div className="p-4 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm flex items-center gap-2">
+                  <Check size={18} />
+                  <span className="font-bold">{uploadResults.succeeded.length}</span> employee{uploadResults.succeeded.length !== 1 ? 's' : ''} added successfully and synced to Salesforce.
+                </div>
+              )}
+              {uploadResults.failed.length > 0 && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm space-y-2">
+                  <div className="flex items-center gap-2 font-bold">
+                    <AlertCircle size={18} />
+                    {uploadResults.failed.length} employee{uploadResults.failed.length !== 1 ? 's' : ''} failed:
+                  </div>
+                  <ul className="list-disc list-inside space-y-1 text-xs">
+                    {uploadResults.failed.map((msg, i) => (
+                      <li key={i}>{msg}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <div className="flex justify-end pt-4 border-t">
+                <button
+                  onClick={() => {
+                    if (uploadResults.succeeded.length > 0) {
+                      onSuccess(uploadResults.succeeded);
+                    } else {
+                      onClose();
+                    }
+                  }}
+                  className="px-6 py-3 bg-boon-blue text-white font-bold rounded-xl hover:bg-boon-darkBlue transition"
+                >
+                  Done
                 </button>
               </div>
             </div>
