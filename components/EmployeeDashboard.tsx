@@ -931,18 +931,27 @@ const EmployeeModal = ({
         onSave(employee!, 'delete');
 
       } else if (isAdd) {
-        // Insert new employee with company_id
+        // Create SF Contact + employee_manager row via edge function
+        const { data: fnData, error: fnError } = await supabase.functions.invoke('portal-employee-sync', {
+          body: {
+            action: 'add',
+            email: cleanedData.company_email,
+            first_name: cleanedData.first_name,
+            last_name: cleanedData.last_name,
+            company_id: companyId,
+            job_title: cleanedData.job_title || undefined,
+            company_name: companyName,
+          }
+        });
+        if (fnError) throw fnError;
+        if (fnData?.error) throw new Error(fnData.error);
+
+        // Refetch the full row for the UI
         const { data, error } = await supabase
           .from('employee_manager')
-          .insert({
-            ...cleanedData,
-            company_name: companyName,
-            company_id: companyId || null,
-            status: 'Active'
-          })
           .select()
+          .eq('id', fnData.employee_id)
           .single();
-
         if (error) throw error;
         onSave(data, 'create');
       } else if (isEdit) {
@@ -959,19 +968,23 @@ const EmployeeModal = ({
         if (error) throw error;
         onSave(data, 'update');
       } else if (isTerminate) {
-        // Terminate employee
-        // Belt-and-suspenders: filter by company_id in addition to RLS
+        // Terminate in SF + employee_manager via edge function
+        const { data: fnData, error: fnError } = await supabase.functions.invoke('portal-employee-sync', {
+          body: {
+            action: 'deactivate',
+            email: employee!.company_email,
+            company_id: companyId,
+          }
+        });
+        if (fnError) throw fnError;
+        if (fnData?.error) throw new Error(fnData.error);
+
+        // Refetch updated row for UI
         const { data, error } = await supabase
           .from('employee_manager')
-          .update({
-            end_date: formData.end_date || new Date().toISOString().split('T')[0],
-            status: 'Inactive'
-          })
-          .eq('id', employee!.id)
-          .eq('company_id', companyId)
           .select()
+          .eq('id', employee!.id)
           .single();
-
         if (error) throw error;
         onSave(data, 'update');
       }
@@ -1387,13 +1400,44 @@ const BatchUploadModal = ({
     setError(null);
 
     try {
-      const { data, error } = await supabase
-        .from('employee_manager')
-        .insert(mappedData)
-        .select();
+      const results: any[] = [];
+      const errors: string[] = [];
 
-      if (error) throw error;
-      onSuccess(data || []);
+      for (const row of mappedData) {
+        try {
+          const { data: fnData, error: fnError } = await supabase.functions.invoke('portal-employee-sync', {
+            body: {
+              action: 'add',
+              email: row.company_email,
+              first_name: row.first_name,
+              last_name: row.last_name,
+              company_id: companyId,
+              job_title: row.job_title || undefined,
+              company_name: companyName,
+            }
+          });
+          if (fnError) throw fnError;
+          if (fnData?.error) throw new Error(fnData.error);
+
+          // Refetch the full row
+          const { data, error } = await supabase
+            .from('employee_manager')
+            .select()
+            .eq('id', fnData.employee_id)
+            .single();
+          if (error) throw error;
+          results.push(data);
+        } catch (rowErr: any) {
+          errors.push(`${row.first_name} ${row.last_name} (${row.company_email}): ${rowErr.message}`);
+        }
+      }
+
+      if (results.length > 0) {
+        onSuccess(results);
+      }
+      if (errors.length > 0) {
+        setError(`${results.length} of ${mappedData.length} employees added. Failed:\n${errors.join('\n')}`);
+      }
     } catch (err: any) {
       console.error('Batch upload error:', err);
       setError(err.message || 'Failed to upload employees');
