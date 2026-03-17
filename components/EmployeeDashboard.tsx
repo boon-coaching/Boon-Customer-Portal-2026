@@ -963,16 +963,31 @@ const EmployeeModal = ({
         if (error) throw error;
         onSave(data, 'create');
       } else if (isEdit) {
-        // Update existing employee
-        // Belt-and-suspenders: filter by company_id in addition to RLS
+        // Update via edge function so changes sync to Salesforce
+        const { data: { session: editSession } } = await supabase.auth.getSession();
+        const editRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/portal-employee-sync`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${editSession?.access_token}`,
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
+            action: 'update',
+            employee_id: Number(employee!.id),
+            company_id: companyId,
+            fields: cleanedData,
+          })
+        });
+        const editData = await editRes.json();
+        if (!editRes.ok || editData.error) throw new Error(editData.error || `Request failed: ${editRes.status}`);
+
+        // Refetch the full row for the UI
         const { data, error } = await supabase
           .from('employee_manager')
-          .update(cleanedData)
-          .eq('id', employee!.id)
-          .eq('company_id', companyId)
           .select()
+          .eq('id', employee!.id)
           .single();
-
         if (error) throw error;
         onSave(data, 'update');
       } else if (isTerminate) {
