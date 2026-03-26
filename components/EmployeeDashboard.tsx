@@ -259,9 +259,16 @@ const EmployeeDashboard: React.FC = () => {
     });
   }, [employees, filterProgram]);
 
+  const getDisplayStatus = (emp: Employee): 'Eligible' | 'Not Eligible' | 'Terminated' => {
+    if (emp.status === 'Terminated') return 'Terminated';
+    if (emp.status === 'Inactive' || emp.end_date) return 'Not Eligible';
+    return 'Eligible';
+  };
+
   const totalCount = programFilteredEmployees.length;
-  const activeCount = programFilteredEmployees.filter(e => e.status !== 'Inactive' && !e.end_date).length;
-  const inactiveCount = programFilteredEmployees.filter(e => e.status === 'Inactive' || e.end_date).length;
+  const eligibleCount = programFilteredEmployees.filter(e => getDisplayStatus(e) === 'Eligible').length;
+  const notEligibleCount = programFilteredEmployees.filter(e => getDisplayStatus(e) === 'Not Eligible').length;
+  const terminatedCount = programFilteredEmployees.filter(e => getDisplayStatus(e) === 'Terminated').length;
 
   // Detect potential duplicates
   const potentialDuplicates = useMemo(() => {
@@ -537,14 +544,14 @@ const EmployeeDashboard: React.FC = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-boon-blue/10 rounded-xl">
               <Users className="w-6 h-6 text-boon-blue" />
             </div>
             <div>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Total Employees</p>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Total</p>
               <p className="text-3xl font-black text-boon-dark">{totalCount}</p>
             </div>
           </div>
@@ -555,8 +562,8 @@ const EmployeeDashboard: React.FC = () => {
               <Check className="w-6 h-6 text-boon-green" />
             </div>
             <div>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Active</p>
-              <p className="text-3xl font-black text-boon-green">{activeCount}</p>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Eligible</p>
+              <p className="text-3xl font-black text-boon-green">{eligibleCount}</p>
             </div>
           </div>
         </div>
@@ -566,8 +573,19 @@ const EmployeeDashboard: React.FC = () => {
               <UserX className="w-6 h-6 text-gray-400" />
             </div>
             <div>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Inactive</p>
-              <p className="text-3xl font-black text-gray-400">{inactiveCount}</p>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Not Eligible</p>
+              <p className="text-3xl font-black text-gray-400">{notEligibleCount}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-red-50 rounded-xl">
+              <UserX className="w-6 h-6 text-red-400" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Terminated</p>
+              <p className="text-3xl font-black text-red-400">{terminatedCount}</p>
             </div>
           </div>
         </div>
@@ -625,21 +643,26 @@ const EmployeeDashboard: React.FC = () => {
         <div className="block md:hidden divide-y divide-gray-100">
            {filteredEmployees.length > 0 ? (
              filteredEmployees.map((emp) => {
-               const isInactive = emp.status === 'Inactive' || emp.end_date;
+               const displayStatus = getDisplayStatus(emp);
+               const isNotEligible = displayStatus !== 'Eligible';
                return (
-                 <div key={emp.id} className={`p-4 ${isInactive ? 'opacity-60' : ''}`}>
+                 <div key={emp.id} className={`p-4 ${isNotEligible ? 'opacity-60' : ''}`}>
                     <div className="flex justify-between items-start mb-2">
                        <div>
                           <h3 className="font-bold text-gray-800">{emp.first_name} {emp.last_name}</h3>
                           <p className="text-sm text-gray-500">{emp.job_title || 'No Title'}</p>
                        </div>
-                       {isInactive ? (
+                       {displayStatus === 'Terminated' ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-50 text-red-500">
+                            Terminated
+                          </span>
+                        ) : displayStatus === 'Not Eligible' ? (
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-gray-100 text-gray-500">
-                            Inactive
+                            Not Eligible
                           </span>
                         ) : (
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-boon-green/10 text-boon-green">
-                            Active
+                            Eligible
                           </span>
                         )}
                     </div>
@@ -664,7 +687,7 @@ const EmployeeDashboard: React.FC = () => {
                         >
                           Edit
                         </button>
-                        {!isInactive && (
+                        {displayStatus === 'Eligible' && (
                           <button
                             onClick={() => handleTerminateEmployee(emp)}
                             className="px-4 py-2 text-gray-400 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-boon-dark"
@@ -721,11 +744,12 @@ const EmployeeDashboard: React.FC = () => {
             <tbody className="divide-y divide-gray-100">
               {filteredEmployees.length > 0 ? (
                 filteredEmployees.map((emp) => {
-                  const isInactive = emp.status === 'Inactive' || emp.end_date;
+                  const displayStatus = getDisplayStatus(emp);
+                  const isNotEligible = displayStatus !== 'Eligible';
                   return (
-                    <tr 
-                      key={emp.id} 
-                      className={`hover:bg-gray-50 transition-colors ${isInactive ? 'opacity-50' : ''}`}
+                    <tr
+                      key={emp.id}
+                      className={`hover:bg-gray-50 transition-colors ${isNotEligible ? 'opacity-50' : ''}`}
                     >
                       <td className="px-6 py-4">
                         <span className="font-semibold text-gray-800 text-sm">{emp.first_name}</span>
@@ -752,13 +776,17 @@ const EmployeeDashboard: React.FC = () => {
                         <span className="text-gray-600 text-sm">{emp.job_title || '-'}</span>
                       </td>
                       <td className="px-6 py-4">
-                        {isInactive ? (
+                        {displayStatus === 'Terminated' ? (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-red-50 text-red-500">
+                            Terminated
+                          </span>
+                        ) : displayStatus === 'Not Eligible' ? (
                           <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-500">
-                            Inactive
+                            Not Eligible
                           </span>
                         ) : (
                           <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-boon-green/10 text-boon-green">
-                            Active
+                            Eligible
                           </span>
                         )}
                       </td>
@@ -771,11 +799,11 @@ const EmployeeDashboard: React.FC = () => {
                           >
                             <Edit2 size={16} />
                           </button>
-                          {!isInactive && (
+                          {displayStatus === 'Eligible' && (
                             <button
                               onClick={() => handleTerminateEmployee(emp)}
                               className="p-2 text-gray-400 hover:text-boon-dark hover:bg-gray-200 rounded-lg transition"
-                              title="Deactivate (Set Inactive)"
+                              title="Set Not Eligible"
                             >
                               <UserX size={16} />
                             </button>
@@ -1809,8 +1837,14 @@ const DuplicateMergeModal = ({
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Status</span>
-                    <span className={`font-medium ${emp.status === 'Active' ? 'text-boon-green' : 'text-gray-500'}`}>
-                      {emp.status || 'Active'}
+                    <span className={`font-medium ${
+                      emp.status === 'Terminated' ? 'text-red-500' :
+                      (emp.status === 'Inactive' || emp.end_date) ? 'text-gray-500' :
+                      'text-boon-green'
+                    }`}>
+                      {emp.status === 'Terminated' ? 'Terminated' :
+                       (emp.status === 'Inactive' || emp.end_date) ? 'Not Eligible' :
+                       'Eligible'}
                     </span>
                   </div>
                 </div>
