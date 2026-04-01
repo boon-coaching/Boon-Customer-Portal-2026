@@ -257,7 +257,7 @@ const ScaleDashboard: React.FC<ScaleDashboardProps> = ({ programTypeFilter }) =>
         ''
       );
       // Exclude "scheduled" and "coach no show"
-      const isValidStatus = status !== 'coach no show' && status !== 'scheduled';
+      const isValidStatus = status === 'completed';
       return isValidStatus && account.includes(currentAccount);
     });
 
