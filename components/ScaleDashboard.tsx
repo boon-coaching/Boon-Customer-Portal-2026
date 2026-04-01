@@ -274,13 +274,12 @@ const ScaleDashboard: React.FC<ScaleDashboardProps> = ({ programTypeFilter }) =>
       return d >= priorWindowStart && d < windowStart;
     });
 
-    const getUniqueEmployees = (sess: SessionWithEmployee[]) => {
-      const uniqueIds = new Set();
-      sess.forEach(s => {
-        const id = s.employee_id || s.employee_name || s.employee_manager?.full_name;
-        if (id) uniqueIds.add(id);
-      });
-      return uniqueIds.size;
+      const getUniqueEmployees = (sess: SessionWithEmployee[]) => {
+    const uniqueIds = new Set();
+    sess.forEach(s => {
+      if (s.employee_id) uniqueIds.add(s.employee_id);
+    });
+    return uniqueIds.size;
     };
 
     const activeInPeriod = getUniqueEmployees(currentPeriodSessions);
