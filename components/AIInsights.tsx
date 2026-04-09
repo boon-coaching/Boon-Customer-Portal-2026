@@ -11,7 +11,7 @@ interface AIInsightsProps {
   companyName: string;
   companyId: string;
   programType: 'SCALE' | 'GROW';
-  timeWindowDays: number; // 30, 90, 180, or 365
+  timeWindowDays: number; // 30, 90, 180, 365, or 2025
   selectedProgram?: string; // 'All Programs' or specific program name
   // Session data
   totalSessions: number;
@@ -67,12 +67,14 @@ const AIInsights: React.FC<AIInsightsProps> = ({
     const topCommunicationThemes = themes.communication.slice(0, 5).map(t => `${t.theme} (${t.count} sessions)`).join(', ');
 
     // Calculate date range for context
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - timeWindowDays);
+    const isCalYear = timeWindowDays === 2025;
+    const endDate = isCalYear ? new Date('2025-12-31') : new Date();
+    const startDate = isCalYear ? new Date('2025-01-01') : new Date();
+    if (!isCalYear) startDate.setDate(startDate.getDate() - timeWindowDays);
 
     const formatDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-    const timeWindowLabel = timeWindowDays === 30 ? 'Last 30 Days'
+    const timeWindowLabel = isCalYear ? 'Calendar Year 2025 (Jan - Dec)'
+      : timeWindowDays === 30 ? 'Last 30 Days'
       : timeWindowDays === 90 ? 'Last 90 Days (Quarter)'
       : timeWindowDays === 180 ? 'Last 6 Months'
       : 'Last 12 Months';

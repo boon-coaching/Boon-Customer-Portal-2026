@@ -73,7 +73,8 @@ interface ScaleDashboardProps {
 
 const ScaleDashboard: React.FC<ScaleDashboardProps> = ({ programTypeFilter }) => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const windowDays = parseInt(searchParams.get('windowDays') || '365', 10);
+  const windowParam = searchParams.get('windowDays') || '365';
+  const windowDays = parseInt(windowParam, 10);
   const selectedProgram = searchParams.get('program') || 'All Programs';
   
   const [sessions, setSessions] = useState<SessionWithEmployee[]>([]);
@@ -156,6 +157,8 @@ const ScaleDashboard: React.FC<ScaleDashboardProps> = ({ programTypeFilter }) =>
   const setWindow = (days: number) => {
     setSearchParams({ windowDays: days.toString(), program: selectedProgram });
   };
+
+  const isCalendarYear = windowDays === 2025;
 
   const setProgram = (program: string) => {
     setSearchParams({ windowDays: windowDays.toString(), program });
@@ -262,16 +265,32 @@ const ScaleDashboard: React.FC<ScaleDashboardProps> = ({ programTypeFilter }) =>
     });
 
     const now = new Date();
-    const windowStart = new Date();
-    windowStart.setDate(now.getDate() - windowDays);
-    
-    const priorWindowStart = new Date();
-    priorWindowStart.setDate(now.getDate() - (windowDays * 2));
+    let windowStart: Date;
+    let windowEnd: Date;
+    let priorWindowStart: Date;
+    let priorWindowEnd: Date;
 
-    const currentPeriodSessions = completedSessions.filter(s => new Date(s.session_date) >= windowStart);
+    if (isCalendarYear) {
+      windowStart = new Date('2025-01-01');
+      windowEnd = new Date('2025-12-31T23:59:59.999');
+      priorWindowStart = new Date('2024-01-01');
+      priorWindowEnd = new Date('2024-12-31T23:59:59.999');
+    } else {
+      windowEnd = now;
+      windowStart = new Date();
+      windowStart.setDate(now.getDate() - windowDays);
+      priorWindowEnd = new Date(windowStart);
+      priorWindowStart = new Date();
+      priorWindowStart.setDate(now.getDate() - (windowDays * 2));
+    }
+
+    const currentPeriodSessions = completedSessions.filter(s => {
+      const d = new Date(s.session_date);
+      return d >= windowStart && d <= windowEnd;
+    });
     const priorPeriodSessions = completedSessions.filter(s => {
       const d = new Date(s.session_date);
-      return d >= priorWindowStart && d < windowStart;
+      return d >= priorWindowStart && d < (isCalendarYear ? priorWindowEnd : windowStart);
     });
 
       const getUniqueEmployees = (sess: SessionWithEmployee[]) => {
@@ -577,13 +596,13 @@ const ScaleDashboard: React.FC<ScaleDashboardProps> = ({ programTypeFilter }) =>
           </div>
 
           <div className="bg-gray-50 p-1 rounded-xl flex items-center border border-gray-100">
-            {[30, 90, 180, 365].map((d) => (
+            {[30, 90, 180, 365, 2025].map((d) => (
               <button
                 key={d}
                 onClick={() => setWindow(d)}
                 className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${windowDays === d ? 'bg-boon-dark text-white shadow-sm' : 'text-gray-400 hover:text-boon-dark'}`}
               >
-                {d === 365 ? '1 Year' : `${d} Days`}
+                {d === 2025 ? '2025' : d === 365 ? '1 Year' : `${d} Days`}
               </button>
             ))}
           </div>
@@ -600,7 +619,7 @@ const ScaleDashboard: React.FC<ScaleDashboardProps> = ({ programTypeFilter }) =>
         />
         <HealthCard 
           title="Sessions" 
-          subtitle={`${windowDays === 365 ? 'Last 12 months' : `Last ${windowDays} days`}`}
+          subtitle={`${isCalendarYear ? '2025' : windowDays === 365 ? 'Last 12 months' : `Last ${windowDays} days`}`}
           value={m.currentSessionsCount} 
           trend={m.priorSessionsCount > 0 ? ((m.currentSessionsCount - m.priorSessionsCount) / m.priorSessionsCount) * 100 : null}
           icon={<Activity className="w-5 h-5 text-boon-coral" />}
@@ -616,7 +635,7 @@ const ScaleDashboard: React.FC<ScaleDashboardProps> = ({ programTypeFilter }) =>
         />
         <HealthCard 
           title="Momentum" 
-          subtitle={`Unique users in ${windowDays === 365 ? '1 year' : `${windowDays} days`}`}
+          subtitle={`Unique users in ${isCalendarYear ? '2025' : windowDays === 365 ? '1 year' : `${windowDays} days`}`}
           value={m.mau} 
           trend={m.mauPrior > 0 ? ((m.mau - m.mauPrior) / m.mauPrior) * 100 : null}
           icon={<TrendingUp className="w-5 h-5 text-boon-green" />}
@@ -665,7 +684,7 @@ const ScaleDashboard: React.FC<ScaleDashboardProps> = ({ programTypeFilter }) =>
                   <Briefcase className="w-4 h-4 text-boon-purple" /> Sessions by Role
                </h3>
                <span className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">
-                 {windowDays === 365 ? 'Last 12 Months' : `Last ${windowDays} Days`}
+                 {isCalendarYear ? '2025' : windowDays === 365 ? 'Last 12 Months' : `Last ${windowDays} Days`}
                </span>
             </div>
             
@@ -745,7 +764,7 @@ const ScaleDashboard: React.FC<ScaleDashboardProps> = ({ programTypeFilter }) =>
           <div className="bg-gray-50 border border-dashed border-gray-200 p-4 rounded-xl flex items-start gap-3">
              <Info className="w-5 h-5 text-gray-400 shrink-0 mt-0.5" />
              <p className="text-xs text-gray-500 leading-relaxed font-medium">
-               <strong>Utilization Note:</strong> {m.currentSessionsCount} sessions were completed in this {windowDays === 365 ? '1-year' : `${windowDays}-day`} window. 
+               <strong>Utilization Note:</strong> {m.currentSessionsCount} sessions were completed in this {isCalendarYear ? 'calendar year 2025' : windowDays === 365 ? '1-year' : `${windowDays}-day`} window. 
                This reflects employee-led demand for growth resources rather than a mandatory curriculum.
              </p>
           </div>
