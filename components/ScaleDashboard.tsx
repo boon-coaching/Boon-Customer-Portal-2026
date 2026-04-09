@@ -350,7 +350,8 @@ const ScaleDashboard: React.FC<ScaleDashboardProps> = ({ programTypeFilter }) =>
     const months: Date[] = [];
     const tempDate = new Date(windowStart);
     tempDate.setDate(1); // Start of the month containing windowStart
-    while (tempDate <= now) {
+    const chartEnd = isCalendarYear ? windowEnd : now;
+    while (tempDate <= chartEnd) {
       months.push(new Date(tempDate));
       tempDate.setMonth(tempDate.getMonth() + 1);
     }
