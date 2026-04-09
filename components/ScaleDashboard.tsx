@@ -271,10 +271,10 @@ const ScaleDashboard: React.FC<ScaleDashboardProps> = ({ programTypeFilter }) =>
     let priorWindowEnd: Date;
 
     if (isCalendarYear) {
-      windowStart = new Date('2025-01-01');
-      windowEnd = new Date('2025-12-31T23:59:59.999');
-      priorWindowStart = new Date('2024-01-01');
-      priorWindowEnd = new Date('2024-12-31T23:59:59.999');
+      windowStart = new Date(2025, 0, 1);
+      windowEnd = new Date(2025, 11, 31, 23, 59, 59, 999);
+      priorWindowStart = new Date(2024, 0, 1);
+      priorWindowEnd = new Date(2024, 11, 31, 23, 59, 59, 999);
     } else {
       windowEnd = now;
       windowStart = new Date();
