@@ -953,6 +953,7 @@ const EmployeeModal = ({
             company_id: companyId,
             job_title: cleanedData.job_title || undefined,
             company_name: companyName,
+            account_name: companyName,
             program: cleanedData.program || undefined,
           })
         });
@@ -1413,6 +1414,7 @@ const BatchUploadModal = ({
     return csvData.map((row: any) => {
       const mapped: Record<string, any> = {
         company_name: companyName,
+        account_name: companyName,
         company_id: companyId || null,
         status: 'Active'
       };
@@ -1460,6 +1462,7 @@ const BatchUploadModal = ({
             company_id: companyId,
             job_title: row.job_title || undefined,
             company_name: companyName,
+            account_name: companyName,
             program: row.program || undefined,
           })
         });
