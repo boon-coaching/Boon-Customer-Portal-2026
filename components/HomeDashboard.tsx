@@ -854,13 +854,36 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({ programTypeFilter }) => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-12 font-sans">
-      
+
+      {/* Brand-v2 page header: eyebrow + DM Sans headline with DM Serif Text italic kicker + summary */}
+      <div className="pt-2">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="inline-block w-5 h-px bg-boon-primary"></span>
+          <span className="font-body font-extrabold text-[10.5px] tracking-[0.18em] uppercase text-gray-500">
+            Grow · Leadership program overview
+          </span>
+        </div>
+        <h1 className="font-display font-extrabold text-3xl md:text-[40px] leading-[1.08] tracking-[-0.02em] text-boon-navy">
+          Growth that{' '}
+          <span className="font-serif italic font-normal text-boon-primary">compounds.</span>
+        </h1>
+        <p className="font-body text-[15px] leading-[1.55] text-gray-500 mt-3 max-w-[62ch]">
+          Welcome back, <b className="font-semibold text-boon-navy">{firstName || companyName.split(' - ')[0]}</b>.
+          {stats.growthPct > 0 ? (
+            <> Your cohort has grown <b className="font-semibold text-boon-navy">{stats.growthPct}%</b> on leadership competencies so far.</>
+          ) : stats.progressPct > 0 ? (
+            <> Your cohort is <b className="font-semibold text-boon-navy">{stats.progressPct}%</b> through the program.</>
+          ) : (
+            <> Your cohort is getting underway.</>
+          )}
+        </p>
+      </div>
+
       {/* Header with Cohort Switcher */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-           <h1 className="text-xl text-gray-500 font-medium">Welcome back, <span className="text-boon-dark font-bold">{firstName || companyName.split(' - ')[0]}</span></h1>
-           <div className="flex flex-wrap items-center gap-2 mt-1">
-             <span className="text-3xl font-bold text-boon-dark">GROW Program Overview</span>
+           <div className="flex flex-wrap items-center gap-2">
+             <span className="font-body font-extrabold text-[10.5px] tracking-[0.18em] uppercase text-gray-500">Viewing cohort</span>
              
              {/* Cohort Dropdown */}
              <div className="relative group ml-0 md:ml-2">
