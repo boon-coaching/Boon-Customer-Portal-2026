@@ -6,13 +6,18 @@
     <title>Boon Dashboard</title>
     <link rel="icon" type="image/png" href="https://res.cloudinary.com/djbo6r080/image/upload/v1764863780/Icon_Blue_10_i8hkao.png">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700;800&family=DM+Sans:wght@500;700;800&family=DM+Serif+Text:ital@1&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
       tailwind.config = {
         theme: {
           extend: {
             fontFamily: {
               sans: ['Barlow', 'sans-serif'],
+              display: ['DM Sans', 'sans-serif'],
+              serif: ['DM Serif Text', 'serif'],
+              body: ['Inter', 'sans-serif'],
             },
             colors: {
               boon: {
@@ -27,6 +32,11 @@
                 green: '#6CD893',
                 bg: '#F0F3F7',
                 dark: '#2E353D',
+                // Brand-v2 additions (additive, not replacing existing tokens)
+                navy: '#1A253B',
+                charcoal: '#2E353D',
+                primary: '#466FF6',
+                accent: '#FF6D6A',
               }
             }
           }
