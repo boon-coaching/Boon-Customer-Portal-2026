@@ -553,7 +553,26 @@ const ScaleDashboard: React.FC<ScaleDashboardProps> = ({ programTypeFilter }) =>
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-12 font-sans">
-      
+
+      {/* Brand-v2 page header: eyebrow + DM Sans headline with DM Serif Text italic kicker + summary */}
+      <div className="pt-2">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="inline-block w-5 h-px bg-boon-primary"></span>
+          <span className="font-body font-extrabold text-[10.5px] tracking-[0.18em] uppercase text-gray-500">
+            Scale · Coverage this quarter
+          </span>
+        </div>
+        <h1 className="font-display font-extrabold text-3xl md:text-[40px] leading-[1.08] tracking-[-0.02em] text-boon-navy">
+          Coaching that{' '}
+          <span className="font-serif italic font-normal text-boon-primary">actually gets used.</span>
+        </h1>
+        <p className="font-body text-[15px] leading-[1.55] text-gray-500 mt-3 max-w-[62ch]">
+          <b className="font-semibold text-boon-navy">{m.adoptionRate.toFixed(0)}%</b> of eligible employees have
+          been active in the selected window. Track who's using coaching, which themes are coming up, and how
+          satisfaction is trending.
+        </p>
+      </div>
+
       <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
         <div className="flex flex-wrap items-center gap-6">
           <div className="flex items-center gap-2">
