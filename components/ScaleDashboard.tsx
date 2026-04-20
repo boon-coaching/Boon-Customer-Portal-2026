@@ -878,28 +878,28 @@ const HealthCard = ({ title, value, label, trend, icon, subtitle, trendLabel }: 
   const isDecimal = typeof value === 'string' && value.includes('.');
 
   return (
-    <HoverCard className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
+    <HoverCard className="bg-white p-6 rounded-[10px] shadow-sm border border-gray-100 flex flex-col justify-between">
       <div className="flex justify-between items-start mb-4">
-        <div className="p-2.5 bg-gray-50 rounded-xl">{icon}</div>
+        <div className="p-2.5 bg-gray-50 rounded-[10px]">{icon}</div>
         {trend !== null && !isZero && (
-          <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-lg ${isPositive ? 'text-boon-green bg-boon-green/5' : 'text-boon-red bg-boon-red/5'}`}>
+          <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-[8px] ${isPositive ? 'text-boon-green bg-boon-green/5' : 'text-boon-red bg-boon-red/5'}`}>
             {isPositive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
             {Math.abs(trend).toFixed(1)}%
           </div>
         )}
       </div>
       <div>
-        <div className="text-3xl font-black text-boon-dark leading-none">
-          <CountUp 
-            end={numericValue} 
-            duration={1500} 
-            decimals={isDecimal ? 1 : 0} 
-            suffix={isPercentage ? '%' : ''} 
+        <div className="font-display text-3xl font-extrabold text-boon-navy leading-none tracking-tight tabular-nums">
+          <CountUp
+            end={numericValue}
+            duration={1500}
+            decimals={isDecimal ? 1 : 0}
+            suffix={isPercentage ? '%' : ''}
           />
-          {label && <span className="text-sm font-bold text-gray-300 ml-1">{label}</span>}
+          {label && <span className="text-sm font-semibold text-gray-400 ml-1">{label}</span>}
         </div>
-        <div className="text-xs font-bold text-boon-dark mt-2 uppercase tracking-wide">{title}</div>
-        <p className="text-[10px] text-gray-400 font-medium mt-1 truncate">{subtitle} {trend !== null && trendLabel && <span className="text-gray-300 ml-1">- {trendLabel}</span>}</p>
+        <div className="font-body text-[10.5px] font-extrabold text-gray-500 mt-3 uppercase tracking-[0.18em]">{title}</div>
+        <p className="text-[10.5px] text-gray-400 font-medium mt-1 truncate">{subtitle} {trend !== null && trendLabel && <span className="text-gray-300 ml-1">- {trendLabel}</span>}</p>
       </div>
     </HoverCard>
   );
