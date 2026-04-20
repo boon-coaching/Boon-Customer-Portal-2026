@@ -568,8 +568,8 @@ const ScaleDashboard: React.FC<ScaleDashboardProps> = ({ programTypeFilter }) =>
         </h1>
         <p className="font-body text-[15px] leading-[1.55] text-gray-500 mt-3 max-w-[62ch]">
           <b className="font-semibold text-boon-navy">{m.adoptionRate.toFixed(0)}%</b> of eligible employees have
-          been active in the selected window. Track who's using coaching, which themes are coming up, and how
-          satisfaction is trending.
+          been active in the selected window. See program-level adoption, top coaching themes, and satisfaction
+          trends — individual sessions stay confidential.
         </p>
       </div>
 
