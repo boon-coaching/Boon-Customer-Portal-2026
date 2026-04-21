@@ -3,6 +3,7 @@ import { isAdminUser } from '../constants';
 import { supabase } from '../lib/supabaseClient';
 import { getDashboardSessions, getCompetencyScores, getSurveyResponses, getProgramConfig, CompanyFilter, buildCompanyFilter } from '../lib/dataFetcher';
 import { trackEvent, AnalyticsEvents } from '../lib/useAnalytics';
+import { Select } from './brand/Select';
 import { FileDown, Loader2, X, Table } from 'lucide-react';
 import jsPDF from 'jspdf';
 
@@ -971,38 +972,28 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({
             </div>
             
             <div className="space-y-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Time Period
-                </label>
-                <select
-                  value={dateRange}
-                  onChange={(e) => setDateRange(e.target.value as any)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                >
-                  <option value="all">All Time</option>
-                  <option value="ytd">Year to Date</option>
-                  <option value="2025">Full Year 2025</option>
-                  <option value="q4">Q4 2024</option>
-                  <option value="q3">Q3 2024</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Program
-                </label>
-                <select
-                  value={selectedProgram}
-                  onChange={(e) => setSelectedProgram(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                >
-                  <option value="all">All Programs</option>
-                  {programs.map(p => (
-                    <option key={p} value={p}>{p}</option>
-                  ))}
-                </select>
-              </div>
+              <Select
+                label="Time Period"
+                value={dateRange}
+                onChange={(e) => setDateRange(e.target.value as any)}
+              >
+                <option value="all">All Time</option>
+                <option value="ytd">Year to Date</option>
+                <option value="2025">Full Year 2025</option>
+                <option value="q4">Q4 2024</option>
+                <option value="q3">Q3 2024</option>
+              </Select>
+
+              <Select
+                label="Program"
+                value={selectedProgram}
+                onChange={(e) => setSelectedProgram(e.target.value)}
+              >
+                <option value="all">All Programs</option>
+                {programs.map(p => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </Select>
             </div>
             
             {progress && (
