@@ -260,14 +260,24 @@ const ThemesDashboard: React.FC<ThemesDashboardProps> = ({ programTypeFilter }) 
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-12">
-      {/* Header & Filters */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-        <div>
-          <h1 className="text-2xl md:text-4xl font-extrabold text-boon-dark tracking-tight uppercase flex items-center gap-3">
-            Coaching Themes <Lightbulb className="w-6 h-6 md:w-8 md:h-8 text-boon-yellow fill-boon-yellow/20" />
+      {/* Brand-v2 page header: eyebrow + DM Sans headline with DM Serif Text italic kicker + summary */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+        <div className="pt-2">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="inline-block w-5 h-px bg-boon-primary"></span>
+            <span className="font-body font-extrabold text-[10.5px] tracking-[0.18em] uppercase text-gray-500">
+              Coaching themes
+            </span>
+          </div>
+          <h1 className="font-display font-extrabold text-3xl md:text-[40px] leading-[1.08] tracking-[-0.02em] text-boon-navy">
+            What your people are{' '}
+            <span className="font-serif italic font-normal text-boon-primary">actually</span>{' '}
+            working on.
           </h1>
-          <p className="text-gray-500 font-medium mt-2 text-sm md:text-base">
-            Analyze the distribution of coaching topics across {processedData.totalSessions} completed sessions.
+          <p className="font-body text-[15px] leading-[1.55] text-gray-500 mt-3 max-w-[62ch]">
+            Top topics surfacing across{' '}
+            <b className="font-semibold text-boon-navy">{processedData.totalSessions}</b>{' '}
+            {processedData.totalSessions === 1 ? 'completed session' : 'completed sessions'} — so you can see where coaching is heaviest and where the gaps are.
           </p>
         </div>
 
