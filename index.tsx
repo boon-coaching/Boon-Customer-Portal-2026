@@ -5,6 +5,7 @@ import App from './App';
 // references --boon-* CSS variables can resolve them.
 import './styles/tokens/colors.css';
 import './styles/tokens/typography.css';
+import './styles/tokens/shadows.css';
 
 interface ErrorBoundaryProps {
   children?: React.ReactNode;
