@@ -463,12 +463,9 @@ const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
                 {hasPreSurvey ? (
                   <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">Completed</span>
                 ) : (
-                  <button
-                    onClick={() => onOpenSurvey('pre')}
-                    className="px-4 py-2 bg-boon-blue text-white rounded-lg text-sm font-medium hover:bg-boon-darkBlue transition-colors"
-                  >
+                  <Button onClick={() => onOpenSurvey('pre')} size="sm">
                     Complete Survey
-                  </button>
+                  </Button>
                 )}
               </div>
               <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
@@ -482,12 +479,9 @@ const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
                 {hasPostSurvey ? (
                   <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">Completed</span>
                 ) : (
-                  <button
-                    onClick={() => onOpenSurvey('post')}
-                    className="px-4 py-2 bg-boon-blue text-white rounded-lg text-sm font-medium hover:bg-boon-darkBlue transition-colors"
-                  >
+                  <Button onClick={() => onOpenSurvey('post')} size="sm">
                     Complete Survey
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>
@@ -673,13 +667,13 @@ const ManagerSurveyModal: React.FC<ManagerSurveyModalProps> = ({
           >
             Cancel
           </button>
-          <button
+          <Button
             onClick={handleSubmit}
-            disabled={submitting}
-            className="flex-1 py-3 bg-boon-blue text-white rounded-lg font-medium hover:bg-boon-darkBlue transition-colors disabled:bg-gray-300"
+            loading={submitting}
+            className="flex-1"
           >
             {submitting ? 'Submitting...' : 'Submit Survey'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

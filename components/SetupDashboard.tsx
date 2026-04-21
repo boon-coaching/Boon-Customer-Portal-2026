@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { isAdminUser } from '../constants';
 import { supabase } from '../lib/supabaseClient';
 import { ChevronRight, Calendar, Upload, Download, ExternalLink, CheckCircle2, Clock, Users, MessageSquare, FileText, Shield, CreditCard, Rocket, X, Copy, Mail, Check, Eye, Info } from 'lucide-react';
+import { Button } from './brand/Button';
 
 const TASK_CATEGORIES = [
   {
@@ -540,12 +541,9 @@ const SetupDashboard: React.FC = () => {
           Your account doesn't have any programs set up yet. Please contact your Boon team to get started.
         </p>
         {accountTeam.length > 0 && accountTeam[0].email && (
-          <a
-            href={`mailto:${accountTeam[0].email}`}
-            className="px-6 py-2.5 bg-boon-blue text-white rounded-lg font-medium hover:bg-boon-darkBlue transition-colors"
-          >
+          <Button as="a" href={`mailto:${accountTeam[0].email}`}>
             Contact {accountTeam[0].name?.split(' ')[0] || 'Your Team'}
-          </a>
+          </Button>
         )}
       </div>
     );
@@ -859,7 +857,7 @@ const SetupDashboard: React.FC = () => {
 
               {/* Save Button */}
               <div className="pt-4 border-t border-gray-100 flex justify-end">
-                <button
+                <Button
                   onClick={async () => {
                     if (!companyId) return;
                     setSaving('competencies');
@@ -920,10 +918,10 @@ const SetupDashboard: React.FC = () => {
                   ) || (
                     !growLetEmployeesChoose && programs.some(p => p.type === 'GROW') && (growCompetencies.length < 3 || growCompetencies.length > 5)
                   )}
-                  className="px-6 py-2.5 bg-boon-blue text-white rounded-lg text-sm font-medium hover:bg-boon-darkBlue transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
+                  loading={saving === 'competencies'}
                 >
                   {saving === 'competencies' ? 'Saving...' : 'Save Focus Areas'}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -989,14 +987,15 @@ const SetupDashboard: React.FC = () => {
                 
                 <div className="space-y-2">
                   {accountTeam.find(m => m.calendly_url) && (
-                    <a 
+                    <Button
+                      as="a"
                       href={accountTeam.find(m => m.calendly_url)?.calendly_url || '#'}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="block w-full py-2.5 bg-boon-blue text-white rounded-lg text-sm font-medium hover:bg-boon-darkBlue transition-colors text-center"
+                      className="w-full"
                     >
                       Schedule a Call
-                    </a>
+                    </Button>
                   )}
                   {accountTeam.some(m => m.email) && (
                     <a 
@@ -1564,7 +1563,7 @@ const SetupDashboard: React.FC = () => {
                 <Download size={16} />
                 Download Allowlist
               </button>
-              <button
+              <Button
                 onClick={async () => {
                   const template = SAFE_SENDER_EMAILS[selectedProvider];
                   const fullText = `Subject: ${template.subject}\n\n${template.body}`;
@@ -1586,11 +1585,10 @@ const SetupDashboard: React.FC = () => {
                   
                   setTimeout(() => setCopied(false), 2000);
                 }}
-                className="px-6 py-2.5 bg-boon-blue text-white rounded-lg text-sm font-medium hover:bg-boon-darkBlue transition-colors flex items-center gap-2"
+                icon={copied ? <Check size={16} /> : <Copy size={16} />}
               >
-                {copied ? <Check size={16} /> : <Copy size={16} />}
                 {copied ? 'Copied!' : 'Copy Email Template'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -1638,13 +1636,9 @@ const ModalActions: React.FC<{
     >
       Cancel
     </button>
-    <button
-      onClick={onSave}
-      disabled={saveDisabled}
-      className="px-6 py-2.5 bg-boon-blue text-white rounded-lg text-sm font-medium hover:bg-boon-darkBlue transition-colors disabled:bg-gray-200 disabled:text-gray-400"
-    >
+    <Button onClick={onSave} disabled={saveDisabled}>
       {saveLabel}
-    </button>
+    </Button>
   </div>
 );
 

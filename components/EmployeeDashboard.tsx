@@ -6,6 +6,7 @@ import { Headline } from './brand/Headline';
 import { Eyebrow } from './brand/Eyebrow';
 import { Badge } from './brand/Badge';
 import { Select } from './brand/Select';
+import { Button } from './brand/Button';
 import { 
   Users, 
   Search, 
@@ -537,13 +538,13 @@ const EmployeeDashboard: React.FC = () => {
         </div>
 
         {/* Desktop Add Button */}
-        <button
+        <Button
           onClick={handleAddEmployee}
-          className="hidden md:flex items-center gap-2 px-5 py-2.5 bg-boon-blue text-white font-bold rounded-xl hover:bg-boon-darkBlue transition shadow-lg shadow-boon-blue/20"
+          icon={<Plus size={18} />}
+          className="hidden md:inline-flex"
         >
-          <Plus size={20} />
           Add Employee
-        </button>
+        </Button>
       </div>
 
       {/* Stats Cards */}
@@ -619,13 +620,14 @@ const EmployeeDashboard: React.FC = () => {
 
       {/* Mobile Add Button - Fixed Bottom */}
       <div className="md:hidden fixed bottom-6 left-6 right-6 z-40">
-        <button
+        <Button
           onClick={handleAddEmployee}
-          className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-boon-blue text-white font-bold rounded-2xl shadow-xl shadow-boon-blue/30 active:scale-95 transition-transform"
+          size="lg"
+          icon={<Plus size={20} />}
+          className="w-full"
         >
-          <Plus size={20} />
           Add Employee
-        </button>
+        </Button>
       </div>
 
       {/* Employee List */}
@@ -1697,7 +1699,7 @@ const BatchUploadModal = ({
                 </div>
               )}
               <div className="flex justify-end pt-4 border-t">
-                <button
+                <Button
                   onClick={() => {
                     if (uploadResults.succeeded.length > 0) {
                       onSuccess(uploadResults.succeeded);
@@ -1705,10 +1707,9 @@ const BatchUploadModal = ({
                       onClose();
                     }
                   }}
-                  className="px-6 py-3 bg-boon-blue text-white font-bold rounded-xl hover:bg-boon-darkBlue transition"
                 >
                   Done
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -1846,20 +1847,13 @@ const DuplicateMergeModal = ({
             >
               Cancel
             </button>
-            <button
+            <Button
               onClick={handleMerge}
-              disabled={!selectedToKeep || merging}
-              className="px-5 py-2.5 bg-boon-blue text-white font-bold rounded-xl hover:bg-boon-darkBlue transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              disabled={!selectedToKeep}
+              loading={merging}
             >
-              {merging ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Merging...
-                </>
-              ) : (
-                'Merge & Delete Duplicate'
-              )}
-            </button>
+              {merging ? 'Merging...' : 'Merge & Delete Duplicate'}
+            </Button>
           </div>
         </div>
       </div>
