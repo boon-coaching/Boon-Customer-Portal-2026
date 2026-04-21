@@ -6,6 +6,8 @@ import { supabase } from '../lib/supabaseClient';
 import { useAnalytics, AnalyticsEvents } from '../lib/useAnalytics';
 import ExecutiveSignals from './ExecutiveSignals';
 import ScaleBaselineDashboard from './ScaleBaselineDashboard';
+import { Headline } from './brand/Headline';
+import { Eyebrow } from './brand/Eyebrow';
 import { 
   Users, 
   Filter, 
@@ -573,26 +575,18 @@ const BaselineDashboard: React.FC<BaselineDashboardProps> = ({ programTypeFilter
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-12">
-      {/* Brand-v2 page header: eyebrow + DM Sans headline with DM Serif Text italic kicker + summary */}
+      {/* Brand v2 page header (Boon Design System: Eyebrow + Headline) */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div className="pt-2">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="inline-block w-5 h-px bg-boon-primary"></span>
-            <span className="font-body font-extrabold text-[10.5px] tracking-[0.18em] uppercase text-gray-500">
-              Cohort baseline
-            </span>
-          </div>
-          <h1 className="font-display font-extrabold text-3xl md:text-[40px] leading-[1.08] tracking-[-0.02em] text-boon-navy">
-            Where your team{' '}
-            <span className="font-serif italic font-normal text-boon-primary">started.</span>
-          </h1>
+          <Eyebrow>Cohort baseline</Eyebrow>
+          <Headline statement="Where your team" kicker="started." />
           <p className="font-body text-[15px] leading-[1.55] text-gray-500 mt-3 max-w-[62ch]">
             {stats?.count ? (
               <>
-                <b className="font-semibold text-boon-navy">{stats.count} {stats.count === 1 ? 'leader' : 'leaders'}</b> completed the welcome survey — here's the baseline snapshot before coaching begins.
+                <b className="font-semibold text-boon-navy">{stats.count} {stats.count === 1 ? 'leader' : 'leaders'}</b> completed the welcome survey. Here's the baseline snapshot before coaching begins.
               </>
             ) : (
-              <>Welcome survey baseline — the honest starting line before coaching begins.</>
+              <>Welcome survey baseline. The honest starting line before coaching begins.</>
             )}
           </p>
         </div>

@@ -18,6 +18,8 @@ import {
   ChevronDown
 } from 'lucide-react';
 import ExecutiveSignals from './ExecutiveSignals';
+import { Headline } from './brand/Headline';
+import { Eyebrow } from './brand/Eyebrow';
 
 type TimeRange = '3M' | '6M' | '12M';
 
@@ -260,24 +262,17 @@ const ThemesDashboard: React.FC<ThemesDashboardProps> = ({ programTypeFilter }) 
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-12">
-      {/* Brand-v2 page header: eyebrow + DM Sans headline with DM Serif Text italic kicker + summary */}
+      {/* Brand v2 page header (Boon Design System: Eyebrow + Headline) */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div className="pt-2">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="inline-block w-5 h-px bg-boon-primary"></span>
-            <span className="font-body font-extrabold text-[10.5px] tracking-[0.18em] uppercase text-gray-500">
-              Coaching themes
-            </span>
-          </div>
-          <h1 className="font-display font-extrabold text-3xl md:text-[40px] leading-[1.08] tracking-[-0.02em] text-boon-navy">
-            What your people are{' '}
-            <span className="font-serif italic font-normal text-boon-primary">actually</span>{' '}
-            working on.
-          </h1>
+          <Eyebrow>Coaching themes</Eyebrow>
+          <Headline
+            statement={<>What your people are <span className="font-[var(--font-serif)] italic font-normal text-[var(--boon-blue)]">actually</span> working on.</>}
+          />
           <p className="font-body text-[15px] leading-[1.55] text-gray-500 mt-3 max-w-[62ch]">
             Top topics surfacing across{' '}
             <b className="font-semibold text-boon-navy">{processedData.totalSessions}</b>{' '}
-            {processedData.totalSessions === 1 ? 'completed session' : 'completed sessions'} — so you can see where coaching is heaviest and where the gaps are.
+            {processedData.totalSessions === 1 ? 'completed session' : 'completed sessions'}, so you can see where coaching is heaviest and where the gaps are.
           </p>
         </div>
 

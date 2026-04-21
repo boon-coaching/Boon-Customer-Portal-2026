@@ -1,0 +1,64 @@
+/*
+ * Boon typography tokens
+ *
+ * Three-font system. Do not introduce other fonts.
+ *   DM Sans         display / headlines
+ *   DM Serif Text   italic kicker emphasis only
+ *   Inter           body / UI
+ *
+ * Fonts are loaded from Google Fonts in index.html. This file only
+ * defines the tokens; it does not re-import them.
+ *
+ * Imported from the canonical Boon Design System
+ * (asimmons-coder/boon-design-system). Keep in lockstep with upstream.
+ */
+
+:root {
+  /* Font families */
+  --font-display: 'DM Sans', 'Inter', system-ui, sans-serif;
+  --font-serif: 'DM Serif Text', Georgia, Cambria, 'Times New Roman', serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+
+  /* Type scale (rem-based, 16px root) */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+  --text-5xl: 3rem;
+  --text-6xl: 3.75rem;
+  --text-7xl: 4.5rem;
+
+  /* Line heights */
+  --leading-tight: 1.1;
+  --leading-snug: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.65;
+
+  /* Letter spacing */
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.02em;
+
+  /* Weights */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+}
+
+/*
+ * Signature category-label treatment. ALL CAPS, wide tracking, blue.
+ * Used for eyebrow labels like LEADERSHIP INTELLIGENCE, GROW · LEADERSHIP
+ * PROGRAM OVERVIEW. Rendered via the Eyebrow component.
+ */
+.boon-eyebrow {
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: 10.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}

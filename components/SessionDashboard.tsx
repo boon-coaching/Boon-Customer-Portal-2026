@@ -26,6 +26,8 @@ import {
   EyeOff
 } from 'lucide-react';
 import ExecutiveSignals from './ExecutiveSignals';
+import { Headline } from './brand/Headline';
+import { Eyebrow } from './brand/Eyebrow';
 
 // --- Program Display Name Mapping ---
 const programDisplayNames: Record<string, string> = {
@@ -822,24 +824,13 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
         />
       )}
 
-      {/* Brand-v2 page header: eyebrow + DM Sans headline with DM Serif Text italic kicker + summary */}
+      {/* Brand v2 page header (Boon Design System: Eyebrow + Headline) */}
       <div className="pt-2">
-        <div className="flex flex-wrap items-center gap-2 mb-3">
-          <span className="inline-block w-5 h-px bg-boon-primary"></span>
-          <span className="font-body font-extrabold text-[10.5px] tracking-[0.18em] uppercase text-gray-500">
-            {filterType === 'all' ? 'All sessions' : 'Session tracking'}
-          </span>
-          {filterType !== 'all' && (
-            <span className="bg-boon-blue/10 text-boon-blue px-2.5 py-0.5 rounded-md text-[10.5px] font-body font-extrabold uppercase tracking-[0.12em] flex items-center gap-1.5">
-              <Layers size={12} />
-              <span className="truncate max-w-[220px]">{displaySubtitle}</span>
-            </span>
-          )}
-        </div>
-        <h1 className="font-display font-extrabold text-3xl md:text-[40px] leading-[1.08] tracking-[-0.02em] text-boon-navy">
-          Your team's coaching,{' '}
-          <span className="font-serif italic font-normal text-boon-primary">measured.</span>
-        </h1>
+        <Eyebrow>
+          {filterType === 'all' ? 'All sessions' : 'Session tracking'}
+          {filterType !== 'all' && displaySubtitle ? `, ${displaySubtitle}` : ''}
+        </Eyebrow>
+        <Headline statement="Your team's coaching," kicker="measured." />
         <p className="font-body text-[15px] leading-[1.55] text-gray-500 mt-3 max-w-[62ch]">
           <b className="font-semibold text-boon-navy">{totalEmployees} {totalEmployees === 1 ? 'leader' : 'leaders'}</b> in {filterType === 'all' ? 'the program' : 'this cohort'},{' '}
           <b className="font-semibold text-boon-navy">{totalSessions}</b> {totalSessions === 1 ? 'session' : 'sessions'} tracked to date.

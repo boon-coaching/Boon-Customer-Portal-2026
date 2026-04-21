@@ -50,6 +50,8 @@ import {
   Target
 } from 'lucide-react';
 import ExecutiveSignals from './ExecutiveSignals';
+import { Headline } from './brand/Headline';
+import { Eyebrow } from './brand/Eyebrow';
 import AIInsightsGrow from './AIInsightsGrow';
 
 const PROGRAM_DISPLAY_NAMES: Record<string, string> = {
@@ -868,18 +870,10 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({ programTypeFilter }) => {
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-12 font-sans">
 
-      {/* Brand-v2 page header: eyebrow + DM Sans headline with DM Serif Text italic kicker + summary */}
+      {/* Brand v2 page header (Boon Design System: Eyebrow + Headline) */}
       <div className="pt-2">
-        <div className="flex items-center gap-2 mb-3">
-          <span className="inline-block w-5 h-px bg-boon-primary"></span>
-          <span className="font-body font-extrabold text-[10.5px] tracking-[0.18em] uppercase text-gray-500">
-            Grow · Leadership program overview
-          </span>
-        </div>
-        <h1 className="font-display font-extrabold text-3xl md:text-[40px] leading-[1.08] tracking-[-0.02em] text-boon-navy">
-          Growth that{' '}
-          <span className="font-serif italic font-normal text-boon-primary">compounds.</span>
-        </h1>
+        <Eyebrow>Grow, Leadership program overview</Eyebrow>
+        <Headline statement="Growth that" kicker="compounds." />
         <p className="font-body text-[15px] leading-[1.55] text-gray-500 mt-3 max-w-[62ch]">
           Welcome back, <b className="font-semibold text-boon-navy">{firstName || companyName.split(' - ')[0]}</b>.
           {stats.growthPct > 0 ? (
