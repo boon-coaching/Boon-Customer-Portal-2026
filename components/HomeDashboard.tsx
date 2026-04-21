@@ -483,7 +483,20 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({ programTypeFilter }) => {
       });
     }
     
-    const sessionsPerEmployee = config?.sessions_per_employee || 5;
+    // sessions_per_employee is stored inconsistently — sometimes numeric ("5"),
+    // sometimes free text ("Debrief + 4 coaching sessions"). Extract the first
+    // integer if present; otherwise fall back to 5.
+    const rawSessionsPerEmployee = config?.sessions_per_employee;
+    let sessionsPerEmployee = 5;
+    if (typeof rawSessionsPerEmployee === 'number' && Number.isFinite(rawSessionsPerEmployee) && rawSessionsPerEmployee > 0) {
+      sessionsPerEmployee = rawSessionsPerEmployee;
+    } else if (typeof rawSessionsPerEmployee === 'string') {
+      const match = rawSessionsPerEmployee.match(/\d+/);
+      if (match) {
+        const parsed = parseInt(match[0], 10);
+        if (Number.isFinite(parsed) && parsed > 0) sessionsPerEmployee = parsed;
+      }
+    }
 
     const targetSessions = totalEmployeesCount * sessionsPerEmployee;
     const progressPct = targetSessions > 0 ? Math.min(100, Math.round((sessionsUsedCount / targetSessions) * 100)) : 0;
