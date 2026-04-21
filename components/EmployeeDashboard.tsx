@@ -559,7 +559,7 @@ const EmployeeDashboard: React.FC = () => {
             </div>
             <div>
               <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Total</p>
-              <p className="text-3xl font-black text-boon-dark">{totalCount}</p>
+              <p className="text-3xl font-extrabold tabular-nums text-boon-dark">{totalCount}</p>
             </div>
           </div>
         </div>
@@ -570,7 +570,7 @@ const EmployeeDashboard: React.FC = () => {
             </div>
             <div>
               <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Eligible</p>
-              <p className="text-3xl font-black text-boon-green">{eligibleCount}</p>
+              <p className="text-3xl font-extrabold tabular-nums text-boon-green">{eligibleCount}</p>
             </div>
           </div>
         </div>
@@ -581,7 +581,7 @@ const EmployeeDashboard: React.FC = () => {
             </div>
             <div>
               <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Terminated</p>
-              <p className="text-3xl font-black text-red-400">{terminatedCount}</p>
+              <p className="text-3xl font-extrabold tabular-nums text-red-400">{terminatedCount}</p>
             </div>
           </div>
         </div>
