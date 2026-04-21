@@ -20,6 +20,7 @@ import {
 import ExecutiveSignals from './ExecutiveSignals';
 import { Headline } from './brand/Headline';
 import { Eyebrow } from './brand/Eyebrow';
+import { Select } from './brand/Select';
 
 type TimeRange = '3M' | '6M' | '12M';
 
@@ -278,17 +279,15 @@ const ThemesDashboard: React.FC<ThemesDashboardProps> = ({ programTypeFilter }) 
 
         <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
           {/* Program Filter Dropdown */}
-          <div className="relative">
-            <select
+          <div className="min-w-[200px]">
+            <Select
               value={selectedProgram}
               onChange={(e) => setSelectedProgram(e.target.value)}
-              className="appearance-none bg-white border border-gray-200 rounded-xl px-4 py-2 pr-10 text-sm font-semibold text-boon-dark shadow-sm cursor-pointer hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-boon-blue/20 min-w-[200px]"
             >
               {programs.map((program) => (
                 <option key={program} value={program}>{program}</option>
               ))}
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            </Select>
           </div>
 
           {/* Time Range Filter */}

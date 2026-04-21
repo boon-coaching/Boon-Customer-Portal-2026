@@ -52,6 +52,7 @@ import {
 import ExecutiveSignals from './ExecutiveSignals';
 import { Headline } from './brand/Headline';
 import { Eyebrow } from './brand/Eyebrow';
+import { Select } from './brand/Select';
 import AIInsightsGrow from './AIInsightsGrow';
 
 const PROGRAM_DISPLAY_NAMES: Record<string, string> = {
@@ -893,17 +894,15 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({ programTypeFilter }) => {
              <span className="font-body font-extrabold text-[10.5px] tracking-[0.18em] uppercase text-gray-500">Viewing cohort</span>
              
              {/* Cohort Dropdown */}
-             <div className="relative group ml-0 md:ml-2">
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-boon-blue pointer-events-none" />
-                <select 
+             <div className="ml-0 md:ml-2 min-w-[220px]">
+                <Select
                   value={selectedCohort}
                   onChange={(e) => handleCohortChange(e.target.value)}
-                  className="appearance-none pl-4 pr-10 py-1.5 bg-boon-blue/10 text-boon-blue font-bold rounded-lg border border-transparent hover:border-boon-blue/30 focus:outline-none focus:ring-2 ring-boon-blue/20 cursor-pointer text-lg transition-all"
                 >
                   {cohorts.map(c => (
                     <option key={c} value={c}>{getCohortDisplayName(c)}</option>
                   ))}
-                </select>
+                </Select>
              </div>
            </div>
         </div>

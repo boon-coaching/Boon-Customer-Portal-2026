@@ -31,6 +31,7 @@ import { Eyebrow } from './brand/Eyebrow';
 import { Badge } from './brand/Badge';
 import { Avatar } from './brand/Avatar';
 import { Button } from './brand/Button';
+import { Select } from './brand/Select';
 
 // --- Program Display Name Mapping ---
 const programDisplayNames: Record<string, string> = {
@@ -920,17 +921,16 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-gray-400" />
-          <select
+        <div className="flex items-center gap-2 min-w-[180px]">
+          <Filter className="w-4 h-4 text-gray-400 shrink-0" />
+          <Select
             value={programFilter}
             onChange={(e) => setProgramFilter(e.target.value)}
-            className="px-3 py-2 bg-boon-bg border-none rounded-lg text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-boon-blue/30"
           >
             {availablePrograms.map(prog => (
               <option key={prog} value={prog}>{prog === 'All' ? 'All Programs' : prog}</option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
 

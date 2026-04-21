@@ -8,6 +8,7 @@ import ExecutiveSignals from './ExecutiveSignals';
 import ScaleBaselineDashboard from './ScaleBaselineDashboard';
 import { Headline } from './brand/Headline';
 import { Eyebrow } from './brand/Eyebrow';
+import { Select } from './brand/Select';
 import { 
   Users, 
   Filter, 
@@ -593,19 +594,15 @@ const BaselineDashboard: React.FC<BaselineDashboardProps> = ({ programTypeFilter
 
         {/* Cohort Selector */}
         <div className="flex items-center gap-3 w-full md:w-auto">
-             <div className="relative group w-full md:w-auto">
-                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                     <Filter className="h-4 w-4 text-gray-400" />
-                 </div>
-                 <select
+             <div className="w-full md:w-auto md:min-w-[220px]">
+                 <Select
                     value={selectedCohort}
                     onChange={(e) => setSelectedCohort(e.target.value)}
-                    className="w-full md:w-auto pl-10 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 ring-boon-purple/30 shadow-sm appearance-none cursor-pointer hover:border-boon-purple/50 transition"
                  >
                     {cohorts.map(c => (
                         <option key={c} value={c}>{c}</option>
                     ))}
-                 </select>
+                 </Select>
              </div>
         </div>
       </div>
