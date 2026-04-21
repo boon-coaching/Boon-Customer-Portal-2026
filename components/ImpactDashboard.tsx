@@ -307,13 +307,30 @@ const ImpactDashboard: React.FC<ImpactDashboardProps> = ({ programTypeFilter }) 
   return (
     <div className="font-sans pb-20 max-w-7xl mx-auto">
       
-      {/* 1. Page Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <div>
-          <h1 className="text-2xl md:text-[28px] font-bold text-[#111827] leading-tight">Program Impact</h1>
-          <p className="text-[#374151] mt-1 text-sm md:text-base">Measuring competency growth from pre to post assessment</p>
+      {/* Brand-v2 page header: eyebrow + DM Sans headline with DM Serif Text italic kicker + summary */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-6">
+        <div className="pt-2">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="inline-block w-5 h-px bg-boon-primary"></span>
+            <span className="font-body font-extrabold text-[10.5px] tracking-[0.18em] uppercase text-gray-500">
+              Program impact
+            </span>
+          </div>
+          <h1 className="font-display font-extrabold text-3xl md:text-[40px] leading-[1.08] tracking-[-0.02em] text-boon-navy">
+            Growth that's{' '}
+            <span className="font-serif italic font-normal text-boon-primary">verifiable.</span>
+          </h1>
+          <p className="font-body text-[15px] leading-[1.55] text-gray-500 mt-3 max-w-[62ch]">
+            {hasImpactData ? (
+              <>
+                <b className="font-semibold text-boon-navy">{overallStats.uniqueParticipants} {overallStats.uniqueParticipants === 1 ? 'leader' : 'leaders'}</b> with matched pre and post assessments — here's exactly how their competencies moved.
+              </>
+            ) : (
+              <>Pre and post competency assessments, side by side — so you can see what actually shifted.</>
+            )}
+          </p>
         </div>
-        
+
         <select
           value={selectedProgram}
           onChange={(e) => setSelectedProgram(e.target.value)}
