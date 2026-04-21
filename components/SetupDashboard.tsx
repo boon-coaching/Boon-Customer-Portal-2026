@@ -1630,12 +1630,9 @@ const ModalActions: React.FC<{
   saveDisabled?: boolean;
 }> = ({ onCancel, onSave, saveLabel = 'Save', saveDisabled = false }) => (
   <div className="p-6 border-t border-gray-100 flex items-center justify-end gap-3">
-    <button
-      onClick={onCancel}
-      className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
-    >
+    <Button onClick={onCancel} variant="ghost">
       Cancel
-    </button>
+    </Button>
     <Button onClick={onSave} disabled={saveDisabled}>
       {saveLabel}
     </Button>

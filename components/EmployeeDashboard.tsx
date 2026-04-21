@@ -1276,13 +1276,9 @@ const EmployeeModal = ({
 
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 shrink-0">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-6 py-3 text-gray-600 font-bold rounded-xl hover:bg-gray-100 transition"
-            >
+            <Button type="button" onClick={onClose} variant="ghost">
               Cancel
-            </button>
+            </Button>
             <button
               type="submit"
               disabled={saving}
@@ -1841,12 +1837,9 @@ const DuplicateMergeModal = ({
             Not a duplicate — Dismiss
           </button>
           <div className="flex gap-3">
-            <button
-              onClick={onClose}
-              className="px-5 py-2.5 border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-100 transition"
-            >
+            <Button onClick={onClose} variant="ghost">
               Cancel
-            </button>
+            </Button>
             <Button
               onClick={handleMerge}
               disabled={!selectedToKeep}
