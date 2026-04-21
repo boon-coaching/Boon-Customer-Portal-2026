@@ -30,6 +30,7 @@ import { Headline } from './brand/Headline';
 import { Eyebrow } from './brand/Eyebrow';
 import { Badge } from './brand/Badge';
 import { Avatar } from './brand/Avatar';
+import { Button } from './brand/Button';
 
 // --- Program Display Name Mapping ---
 const programDisplayNames: Record<string, string> = {
@@ -789,12 +790,9 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
         <AlertCircle className="w-16 h-16 text-boon-red mb-4" />
         <h2 className="text-2xl font-bold text-gray-800 mb-2">Connection Error</h2>
         <p className="text-gray-600 mb-6 max-w-2xl font-mono text-sm bg-gray-50 p-4 rounded border border-gray-200 break-all">{error}</p>
-        <button 
-          onClick={() => window.location.reload()}
-          className="px-6 py-2 bg-boon-blue text-white font-bold rounded-lg hover:bg-boon-darkBlue transition shadow-sm"
-        >
+        <Button onClick={() => window.location.reload()}>
           Retry Connection
-        </button>
+        </Button>
       </div>
     );
   }

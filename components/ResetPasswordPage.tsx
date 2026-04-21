@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { Lock, Loader2, ArrowRight, CheckCircle } from 'lucide-react';
+import { Button } from './brand/Button';
 
 const ResetPasswordPage: React.FC = () => {
   const [password, setPassword] = useState('');
@@ -149,23 +150,15 @@ const ResetPasswordPage: React.FC = () => {
                 </div>
               </div>
 
-              <button
+              <Button
                 type="submit"
-                disabled={loading}
-                className="w-full bg-boon-blue hover:bg-boon-darkBlue text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-boon-blue/30 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-2"
+                loading={loading}
+                size="lg"
+                icon={!loading && <ArrowRight className="w-5 h-5" />}
+                className="w-full mt-2"
               >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Resetting...
-                  </>
-                ) : (
-                  <>
-                    Reset Password
-                    <ArrowRight className="w-5 h-5" />
-                  </>
-                )}
-              </button>
+                {loading ? 'Resetting...' : 'Reset Password'}
+              </Button>
             </form>
           )}
         </div>

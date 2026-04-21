@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { trackEvent, AnalyticsEvents } from '../lib/useAnalytics';
 import { Lock, Mail, Loader2, ArrowRight, ArrowLeft, User } from 'lucide-react';
+import { Button } from './brand/Button';
 
 type ViewMode = 'login' | 'signup' | 'forgot';
 
@@ -282,23 +283,15 @@ const LoginPage: React.FC = () => {
                   </div>
                 </div>
 
-                <button
+                <Button
                   type="submit"
-                  disabled={loading}
-                  className="w-full bg-boon-blue hover:bg-boon-darkBlue text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-boon-blue/30 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-2"
+                  loading={loading}
+                  size="lg"
+                  icon={!loading && <ArrowRight className="w-5 h-5" />}
+                  className="w-full mt-2"
                 >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Signing In...
-                    </>
-                  ) : (
-                    <>
-                      Sign In
-                      <ArrowRight className="w-5 h-5" />
-                    </>
-                  )}
-                </button>
+                  {loading ? 'Signing In...' : 'Sign In'}
+                </Button>
               </form>
 
               <div className="mt-6 text-center">
@@ -403,23 +396,15 @@ const LoginPage: React.FC = () => {
                   </div>
                 </div>
 
-                <button
+                <Button
                   type="submit"
-                  disabled={loading}
-                  className="w-full bg-boon-blue hover:bg-boon-darkBlue text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-boon-blue/30 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-2"
+                  loading={loading}
+                  size="lg"
+                  icon={!loading && <ArrowRight className="w-5 h-5" />}
+                  className="w-full mt-2"
                 >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Creating Account...
-                    </>
-                  ) : (
-                    <>
-                      Create Account
-                      <ArrowRight className="w-5 h-5" />
-                    </>
-                  )}
-                </button>
+                  {loading ? 'Creating Account...' : 'Create Account'}
+                </Button>
               </form>
 
               <div className="mt-6 text-center">
@@ -458,23 +443,15 @@ const LoginPage: React.FC = () => {
                   </p>
                 </div>
 
-                <button
+                <Button
                   type="submit"
-                  disabled={loading}
-                  className="w-full bg-boon-blue hover:bg-boon-darkBlue text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-boon-blue/30 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-2"
+                  loading={loading}
+                  size="lg"
+                  icon={!loading && <ArrowRight className="w-5 h-5" />}
+                  className="w-full mt-2"
                 >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      Send Reset Link
-                      <ArrowRight className="w-5 h-5" />
-                    </>
-                  )}
-                </button>
+                  {loading ? 'Sending...' : 'Send Reset Link'}
+                </Button>
               </form>
 
               <div className="mt-6 text-center">
