@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useAnalytics, AnalyticsEvents } from '../lib/useAnalytics';
 import { Headline } from './brand/Headline';
 import { Eyebrow } from './brand/Eyebrow';
+import { Badge } from './brand/Badge';
 import { 
   Users, 
   Search, 
@@ -643,13 +644,9 @@ const EmployeeDashboard: React.FC = () => {
                           <p className="text-sm text-gray-500">{emp.job_title || 'No Title'}</p>
                        </div>
                        {displayStatus === 'Terminated' ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-50 text-red-500">
-                            Terminated
-                          </span>
+                          <Badge variant="error">Terminated</Badge>
                         ) : (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-boon-green/10 text-boon-green">
-                            Eligible
-                          </span>
+                          <Badge variant="success">Eligible</Badge>
                         )}
                     </div>
                     
@@ -763,13 +760,9 @@ const EmployeeDashboard: React.FC = () => {
                       </td>
                       <td className="px-6 py-4">
                         {displayStatus === 'Terminated' ? (
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-red-50 text-red-500">
-                            Terminated
-                          </span>
+                          <Badge variant="error">Terminated</Badge>
                         ) : (
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-boon-green/10 text-boon-green">
-                            Eligible
-                          </span>
+                          <Badge variant="success">Eligible</Badge>
                         )}
                       </td>
                       <td className="px-6 py-4 text-right">

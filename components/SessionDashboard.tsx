@@ -28,6 +28,7 @@ import {
 import ExecutiveSignals from './ExecutiveSignals';
 import { Headline } from './brand/Headline';
 import { Eyebrow } from './brand/Eyebrow';
+import { Badge } from './brand/Badge';
 
 // --- Program Display Name Mapping ---
 const programDisplayNames: Record<string, string> = {
@@ -1035,9 +1036,11 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex w-fit items-center px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wide ${emp.status === 'pending_match' ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-boon-blue/10 text-boon-blue border border-boon-blue/20'}`}>
-                        {emp.status === 'pending_match' ? 'PENDING MATCH' : getDisplayName(emp.program)}
-                      </span>
+                      {emp.status === 'pending_match' ? (
+                        <Badge variant="warning">Pending match</Badge>
+                      ) : (
+                        <Badge variant="info">{getDisplayName(emp.program)}</Badge>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-center">
                       <div className={`inline-flex items-center justify-center w-8 h-6 rounded-full font-bold text-sm ${emp.completed > 0 ? 'bg-boon-green/20 text-boon-green' : 'text-gray-300'}`}>
@@ -1396,9 +1399,7 @@ const EmployeeDetailModal = ({
                 <div>
                    <h2 className="text-lg sm:text-xl font-black text-boon-dark">{employee.name}</h2>
                    <div className="flex items-center gap-2 text-sm font-medium text-gray-500 mt-0.5">
-                      <span className="text-boon-blue bg-boon-blue/10 px-2 py-0.5 rounded text-xs uppercase tracking-wide font-bold">
-                        {getDisplayName(employee.program)}
-                      </span>
+                      <Badge variant="info">{getDisplayName(employee.program)}</Badge>
                    </div>
                 </div>
              </div>
@@ -1457,17 +1458,11 @@ const EmployeeDetailModal = ({
                              </div>
                              
                              {isNoShow ? (
-                                <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-red-50 text-boon-red border border-red-100 uppercase tracking-wide">
-                                   {session.status || 'No Show'}
-                                </span>
+                                <Badge variant="error">{session.status || 'No Show'}</Badge>
                              ) : isCompleted ? (
-                                <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-green-50 text-boon-green border border-green-100 uppercase tracking-wide">
-                                   Completed
-                                </span>
+                                <Badge variant="success">Completed</Badge>
                              ) : (
-                                <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-blue-50 text-boon-blue border border-blue-100 uppercase tracking-wide">
-                                   Scheduled
-                                </span>
+                                <Badge variant="info">Scheduled</Badge>
                              )}
                           </div>
                           
