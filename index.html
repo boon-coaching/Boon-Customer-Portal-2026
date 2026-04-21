@@ -14,10 +14,15 @@
         theme: {
           extend: {
             fontFamily: {
-              sans: ['Barlow', 'sans-serif'],
+              // Inter is now the default body/UI font (per boon-brand body-font spec).
+              // DM Sans is reserved for display/headline moments; DM Serif Text italic
+              // for kicker phrases. Barlow kept loaded for any legacy surfaces still
+              // using it directly, but no longer the default for `font-sans`.
+              sans: ['Inter', 'sans-serif'],
               display: ['DM Sans', 'sans-serif'],
               serif: ['DM Serif Text', 'serif'],
               body: ['Inter', 'sans-serif'],
+              barlow: ['Barlow', 'sans-serif'],
             },
             colors: {
               boon: {
