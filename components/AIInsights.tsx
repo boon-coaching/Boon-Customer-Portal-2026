@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Sparkles, Loader2, Download, RefreshCw, Building2, TrendingUp, Users, MessageSquare, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
+import { buildBenchmarkSection } from '../lib/insightsBenchmarks';
 
 interface ThemeCount {
   theme: string;
@@ -162,7 +163,9 @@ ${feedbackHighlights.slice(0, 5).map(f => `- "${f.substring(0, 200)}${f.length >
     setError(null);
     
     try {
-      const internalData = buildInternalDataSummary();
+      const baseInternalData = buildInternalDataSummary();
+      const benchmarkSection = await buildBenchmarkSection('Scale');
+      const internalData = baseInternalData + benchmarkSection;
       
       // Get the session for auth
       const { data: { session } } = await supabase.auth.getSession();
