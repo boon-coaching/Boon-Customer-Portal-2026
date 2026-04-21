@@ -1039,7 +1039,13 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
                       {emp.status === 'pending_match' ? (
                         <Badge variant="warning">Pending match</Badge>
                       ) : (
-                        <Badge variant="info">{getDisplayName(emp.program)}</Badge>
+                        <Badge
+                          variant="info"
+                          title={getDisplayName(emp.program)}
+                          className="max-w-[180px] whitespace-nowrap overflow-hidden"
+                        >
+                          <span className="truncate">{getDisplayName(emp.program)}</span>
+                        </Badge>
                       )}
                     </td>
                     <td className="px-6 py-4 text-center">

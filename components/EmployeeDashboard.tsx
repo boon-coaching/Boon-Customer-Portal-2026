@@ -750,9 +750,13 @@ const EmployeeDashboard: React.FC = () => {
                       </td>
                       <td className="px-6 py-4">
                         {(emp.coaching_program) ? (
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-boon-blue/10 text-boon-blue">
-                            {emp.coaching_program}
-                          </span>
+                          <Badge
+                            variant="info"
+                            title={emp.coaching_program}
+                            className="max-w-[180px] whitespace-nowrap overflow-hidden"
+                          >
+                            <span className="truncate">{emp.coaching_program}</span>
+                          </Badge>
                         ) : (
                           <span className="text-gray-300">-</span>
                         )}
