@@ -468,7 +468,7 @@ const SummaryCardWithBenchmark = ({ icon, label, value, benchmark, suffix }: {
         <div className="p-2 bg-gray-50 rounded-lg">{icon}</div>
         <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</span>
       </div>
-      <div className="text-3xl font-black text-boon-dark">
+      <div className="text-3xl font-extrabold tabular-nums text-boon-dark">
         <CountUp end={value} duration={1500} decimals={1} />
         {suffix && <span className="text-sm font-medium text-gray-400 ml-1">{suffix}</span>}
       </div>

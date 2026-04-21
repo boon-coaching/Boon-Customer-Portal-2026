@@ -795,7 +795,7 @@ const ScaleDashboard: React.FC<ScaleDashboardProps> = ({ programTypeFilter }) =>
               <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6">Benefit Sentiment</h3>
               <div className="space-y-6">
                  <div>
-                    <div className="text-3xl font-black text-boon-dark">
+                    <div className="text-3xl font-extrabold tabular-nums text-boon-dark">
                       {m.nps !== null ? (
                         <>{m.nps > 0 ? '+' : ''}<CountUp end={m.nps} duration={1500} decimals={0} /></>
                       ) : 'n/a'}
@@ -803,7 +803,7 @@ const ScaleDashboard: React.FC<ScaleDashboardProps> = ({ programTypeFilter }) =>
                     <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Net Promoter Score</div>
                  </div>
                  <div>
-                    <div className="text-3xl font-black text-boon-dark">
+                    <div className="text-3xl font-extrabold tabular-nums text-boon-dark">
                       {m.avgSat ? <CountUp end={parseFloat(m.avgSat)} duration={1500} decimals={1} /> : 'n/a'}
                     </div>
                     <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Avg Coach Satisfaction</div>

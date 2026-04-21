@@ -1285,24 +1285,24 @@ const MetricCard = ({ value, label, icon, subtext }: { value: string | number, l
     const renderValue = () => {
         if (isNumeric) {
             if (isNPS) {
-                return <CountUpNPS value={value as number} className="text-3xl font-black text-boon-dark" />;
+                return <CountUpNPS value={value as number} className="text-3xl font-extrabold tabular-nums text-boon-dark" />;
             }
-            return <CountUp end={value as number} duration={1200} className="text-3xl font-black text-boon-dark" />;
+            return <CountUp end={value as number} duration={1200} className="text-3xl font-extrabold tabular-nums text-boon-dark" />;
         }
         if (isRating) {
             const num = parseFloat(String(value).split('/')[0]);
-            return <CountUpRating value={num} className="text-3xl font-black text-boon-dark" />;
+            return <CountUpRating value={num} className="text-3xl font-extrabold tabular-nums text-boon-dark" />;
         }
         if (isPercentage) {
             const num = parseFloat(String(value).replace('%', ''));
-            return <CountUp end={num} duration={1200} suffix="%" className="text-3xl font-black text-boon-dark" />;
+            return <CountUp end={num} duration={1200} suffix="%" className="text-3xl font-extrabold tabular-nums text-boon-dark" />;
         }
         // For NPS with + prefix like "+69"
         if (String(value).startsWith('+')) {
             const num = parseFloat(String(value).replace('+', ''));
-            return <CountUpNPS value={num} className="text-3xl font-black text-boon-dark" />;
+            return <CountUpNPS value={num} className="text-3xl font-extrabold tabular-nums text-boon-dark" />;
         }
-        return <span className="text-3xl font-black text-boon-dark">{value}</span>;
+        return <span className="text-3xl font-extrabold tabular-nums text-boon-dark">{value}</span>;
     };
     
     return (

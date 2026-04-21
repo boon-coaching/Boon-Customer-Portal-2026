@@ -1342,7 +1342,7 @@ const KPICard = ({
               </div>
               <div>
                   <p className={`text-xs font-bold uppercase tracking-wide ${titleColor}`}>{title}</p>
-                  <p className={`text-3xl font-black ${valueColor}`}>{value}</p>
+                  <p className={`text-3xl font-extrabold tabular-nums ${valueColor}`}>{value}</p>
               </div>
             </div>
         </div>
