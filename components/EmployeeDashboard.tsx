@@ -745,8 +745,13 @@ const EmployeeDashboard: React.FC = () => {
                       <td className="px-6 py-4">
                         <span className="font-bold text-gray-800 text-sm">{emp.last_name}</span>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className="text-gray-600 text-sm">{emp.company_email || '-'}</span>
+                      <td className="px-6 py-4 max-w-[220px]">
+                        <span
+                          className="text-gray-600 text-sm block truncate"
+                          title={emp.company_email || ''}
+                        >
+                          {emp.company_email || '-'}
+                        </span>
                       </td>
                       <td className="px-6 py-4">
                         {(emp.coaching_program) ? (
@@ -757,11 +762,21 @@ const EmployeeDashboard: React.FC = () => {
                           <span className="text-gray-300">-</span>
                         )}
                       </td>
-                      <td className="px-6 py-4">
-                        <span className="text-gray-600 text-sm">{emp.department || '-'}</span>
+                      <td className="px-6 py-4 max-w-[180px]">
+                        <span
+                          className="text-gray-600 text-sm block truncate"
+                          title={emp.department || ''}
+                        >
+                          {emp.department || '-'}
+                        </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className="text-gray-600 text-sm">{emp.job_title || '-'}</span>
+                      <td className="px-6 py-4 max-w-[200px]">
+                        <span
+                          className="text-gray-600 text-sm block truncate"
+                          title={emp.job_title || ''}
+                        >
+                          {emp.job_title || '-'}
+                        </span>
                       </td>
                       <td className="px-6 py-4">
                         {displayStatus === 'Terminated' ? (
