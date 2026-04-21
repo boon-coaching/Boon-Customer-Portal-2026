@@ -598,6 +598,7 @@ const BaselineDashboard: React.FC<BaselineDashboardProps> = ({ programTypeFilter
                  <Select
                     value={selectedCohort}
                     onChange={(e) => setSelectedCohort(e.target.value)}
+                    className="bg-white border-gray-200"
                  >
                     {cohorts.map(c => (
                         <option key={c} value={c}>{c}</option>

@@ -898,6 +898,7 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({ programTypeFilter }) => {
                 <Select
                   value={selectedCohort}
                   onChange={(e) => handleCohortChange(e.target.value)}
+                  className="bg-white border-gray-200"
                 >
                   {cohorts.map(c => (
                     <option key={c} value={c}>{getCohortDisplayName(c)}</option>
