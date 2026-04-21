@@ -602,6 +602,7 @@ const EmployeeDashboard: React.FC = () => {
             <Select
               value={filterProgram}
               onChange={(e) => setFilterProgram(e.target.value)}
+              className="bg-white border-gray-200"
             >
               {programs.map(prog => (
                 <option key={prog} value={prog}>{prog === 'All' ? 'All Programs' : prog}</option>

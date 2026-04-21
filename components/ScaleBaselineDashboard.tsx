@@ -301,6 +301,7 @@ const ScaleBaselineDashboard: React.FC = () => {
               label="Program"
               value={selectedProgram}
               onChange={(e) => setSelectedProgram(e.target.value)}
+              className="bg-white border-gray-200"
             >
               {programs.map(p => (
                 <option key={p} value={p}>{p}</option>

@@ -283,6 +283,7 @@ const ThemesDashboard: React.FC<ThemesDashboardProps> = ({ programTypeFilter }) 
             <Select
               value={selectedProgram}
               onChange={(e) => setSelectedProgram(e.target.value)}
+              className="bg-white border-gray-200"
             >
               {programs.map((program) => (
                 <option key={program} value={program}>{program}</option>

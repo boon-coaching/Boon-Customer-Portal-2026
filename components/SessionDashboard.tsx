@@ -926,6 +926,7 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
           <Select
             value={programFilter}
             onChange={(e) => setProgramFilter(e.target.value)}
+            className="bg-white border-gray-200"
           >
             {availablePrograms.map(prog => (
               <option key={prog} value={prog}>{prog === 'All' ? 'All Programs' : prog}</option>

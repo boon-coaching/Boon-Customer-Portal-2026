@@ -330,6 +330,7 @@ const ImpactDashboard: React.FC<ImpactDashboardProps> = ({ programTypeFilter }) 
           <Select
             value={selectedProgram}
             onChange={(e) => setSelectedProgram(e.target.value)}
+            className="bg-white border-gray-200"
           >
             {programs.map(p => (
               <option key={p} value={p}>{p === 'All Programs' ? 'All Programs' : getDisplayName(p)}</option>
