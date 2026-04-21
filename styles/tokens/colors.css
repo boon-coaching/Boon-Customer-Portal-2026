@@ -55,4 +55,8 @@
   --boon-product-together-accent: #FDE68A;
   --boon-product-adapt: #C47ACC;
   --boon-product-adapt-accent: #E8B4EC;
+
+  /* Legacy aliases retained for DS components (Badge uses -dark). */
+  --boon-coral-legacy-light: #FFE8E8;
+  --boon-coral-legacy-dark: #E55555;
 }
