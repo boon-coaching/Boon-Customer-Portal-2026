@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Sparkles, Loader2, Download, RefreshCw, Building2, TrendingUp, Users, MessageSquare, AlertCircle, Target } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
+import { buildBenchmarkSection } from '../lib/insightsBenchmarks';
 
 interface CompetencyGrowth {
   name: string;
@@ -182,7 +183,9 @@ ${feedbackHighlights.slice(0, 3).map(f => `- "${f.substring(0, 200)}${f.length >
     setError(null);
     
     try {
-      const internalData = buildInternalDataSummary();
+      const baseInternalData = buildInternalDataSummary();
+      const benchmarkSection = await buildBenchmarkSection('GROW');
+      const internalData = baseInternalData + benchmarkSection;
       const { phase } = getProgramPhase();
       
       // Get the session for auth
