@@ -5,6 +5,7 @@ import { useAnalytics, AnalyticsEvents } from '../lib/useAnalytics';
 import { Headline } from './brand/Headline';
 import { Eyebrow } from './brand/Eyebrow';
 import { Badge } from './brand/Badge';
+import { Select } from './brand/Select';
 import { 
   Users, 
   Search, 
@@ -1179,13 +1180,10 @@ const EmployeeModal = ({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
-                  Program
-                </label>
-                <select
+                <Select
+                  label="Program"
                   value={formData.program}
                   onChange={(e) => setFormData({ ...formData, program: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 ring-boon-blue/30"
                 >
                   <option value="">Select a program</option>
                   <option value="GROW">GROW</option>
@@ -1195,7 +1193,7 @@ const EmployeeModal = ({
                     <option key={prog} value={prog}>{prog}</option>
                   ))}
                   <option value="__new__">+ Add new program</option>
-                </select>
+                </Select>
                 {formData.program === '__new__' && (
                   <input
                     type="text"
@@ -1560,21 +1558,17 @@ const BatchUploadModal = ({
                   <h3 className="font-bold text-gray-800 mb-3">Required Fields</h3>
                   {requiredFields.map(field => (
                     <div key={field} className="mb-3">
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                        {field.replace(/_/g, ' ')} *
-                      </label>
-                      <select
+                      <Select
+                        label={`${field.replace(/_/g, ' ')} *`}
                         value={mapping[field] || ''}
                         onChange={(e) => setMapping({ ...mapping, [field]: e.target.value })}
-                        className={`w-full px-3 py-2 border rounded-lg text-sm ${
-                          !mapping[field] ? 'border-red-300' : 'border-gray-200'
-                        }`}
+                        error={!mapping[field] ? 'Required' : undefined}
                       >
                         <option value="">-- Select column --</option>
                         {headers.map(h => (
                           <option key={h} value={h}>{h}</option>
                         ))}
-                      </select>
+                      </Select>
                     </div>
                   ))}
                 </div>
@@ -1582,19 +1576,16 @@ const BatchUploadModal = ({
                   <h3 className="font-bold text-gray-800 mb-3">Optional Fields</h3>
                   {optionalFields.map(field => (
                     <div key={field} className="mb-3">
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                        {field.replace(/_/g, ' ')}
-                      </label>
-                      <select
+                      <Select
+                        label={field.replace(/_/g, ' ')}
                         value={mapping[field] || ''}
                         onChange={(e) => setMapping({ ...mapping, [field]: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
                       >
                         <option value="">-- Skip --</option>
                         {headers.map(h => (
                           <option key={h} value={h}>{h}</option>
                         ))}
-                      </select>
+                      </Select>
                     </div>
                   ))}
                 </div>
