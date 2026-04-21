@@ -3,13 +3,46 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 const PERPLEXITY_API_KEY = Deno.env.get("PERPLEXITY_API_KEY");
 
-const allowedOrigin = Deno.env.get('ALLOWED_ORIGIN') ?? 'https://portal.boon-health.com';
-const corsHeaders = {
-  "Access-Control-Allow-Origin": allowedOrigin,
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+// Resolve CORS origin at request time so prod, the legacy prod host, and
+// every Vercel preview URL for this project all work without manual secret
+// updates. The previous single-origin ALLOWED_ORIGIN broke every preview
+// deploy because the browser rejected the preflight.
+const staticAllowedOrigins = new Set<string>([
+  "https://insights.boon-health.com",
+  "https://portal.boon-health.com",
+  "http://localhost:5173",
+  "http://localhost:3000",
+]);
+// Optional override via env; accepts comma-separated list.
+const envAllowedOrigins = (Deno.env.get("ALLOWED_ORIGIN") ?? "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+for (const o of envAllowedOrigins) staticAllowedOrigins.add(o);
+
+function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return false;
+  if (staticAllowedOrigins.has(origin)) return true;
+  // Allow any Vercel preview URL for this project.
+  // Vercel preview hostnames look like
+  //   boon-customer-portal-2026-<slug>-boon-coaching.vercel.app
+  if (/^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin)) return true;
+  return false;
+}
+
+function corsHeadersFor(origin: string | null): Record<string, string> {
+  const allow = isAllowedOrigin(origin) ? origin! : "https://insights.boon-health.com";
+  return {
+    "Access-Control-Allow-Origin": allow,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Vary": "Origin",
+  };
+}
 
 serve(async (req) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = corsHeadersFor(origin);
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
