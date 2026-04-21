@@ -522,15 +522,24 @@ const EmployeeDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl md:text-4xl font-extrabold text-boon-dark tracking-tight uppercase">Employee Manager</h1>
-          <p className="text-gray-500 font-medium text-sm mt-2">
-            Manage roster, coaching programs, and employment status.
+      {/* Brand-v2 page header: eyebrow + DM Sans headline with DM Serif Text italic kicker + summary */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+        <div className="pt-2">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="inline-block w-5 h-px bg-boon-primary"></span>
+            <span className="font-body font-extrabold text-[10.5px] tracking-[0.18em] uppercase text-gray-500">
+              Employee manager
+            </span>
+          </div>
+          <h1 className="font-display font-extrabold text-3xl md:text-[40px] leading-[1.08] tracking-[-0.02em] text-boon-navy">
+            Your roster,{' '}
+            <span className="font-serif italic font-normal text-boon-primary">clean and current.</span>
+          </h1>
+          <p className="font-body text-[15px] leading-[1.55] text-gray-500 mt-3 max-w-[62ch]">
+            <b className="font-semibold text-boon-navy">{totalCount} {totalCount === 1 ? 'employee' : 'employees'}</b> in the coaching program — add, edit, and terminate access without leaving this screen.
           </p>
         </div>
-        
+
         {/* Desktop Add Button */}
         <button
           onClick={handleAddEmployee}
