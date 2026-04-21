@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+const PERPLEXITY_API_KEY = Deno.env.get("PERPLEXITY_API_KEY");
 
 const allowedOrigin = Deno.env.get('ALLOWED_ORIGIN') ?? 'https://portal.boon-health.com';
 const corsHeaders = {
@@ -65,59 +66,56 @@ serve(async (req) => {
     const isGrow = programType === 'GROW';
     console.log(`Generating ${isGrow ? 'GROW' : 'SCALE'} insights for ${companyName} (${companyId})${programPhase ? ` - Phase: ${programPhase}` : ''}`);
 
-    // Step 1: Search for company context using Claude with web search
+    // Step 1: Search for company context using Perplexity (purpose-built for
+    // research + synthesis of recent news). Falls back gracefully if the key
+    // is missing or the call fails — the insight generation still runs.
     let companyContext = "No external context available.";
 
-    try {
-      const contextResponse = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": ANTHROPIC_API_KEY,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1024,
-          tools: [
-            {
-              type: "web_search_20250305",
-              name: "web_search",
-            },
-          ],
-          messages: [
-            {
-              role: "user",
-              content: `Search for recent news and information about "${companyName}". Provide a concise 2-3 paragraph summary covering:
+    if (PERPLEXITY_API_KEY) {
+      try {
+        const contextResponse = await fetch("https://api.perplexity.ai/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${PERPLEXITY_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: "sonar-pro",
+            max_tokens: 700,
+            messages: [
+              {
+                role: "system",
+                content: "You are a research analyst. Return a concise 2-3 paragraph briefing — no preamble, no headings, no bullet lists. Prioritize specific facts over general descriptions.",
+              },
+              {
+                role: "user",
+                content: `Brief me on "${companyName}". Cover:
 1. What the company does (industry, products/services)
-2. Recent news (last 6 months) - any major announcements, changes, or challenges
+2. Recent news from the last 6 months — major announcements, leadership changes, layoffs, reorganizations, funding, or challenges
 3. Company size and any known organizational changes
 
 This context will help analyze their employee coaching program data.`,
-            },
-          ],
-        }),
-      });
+              },
+            ],
+          }),
+        });
 
-      if (contextResponse.ok) {
-        const contextData = await contextResponse.json();
-        companyContext = contextData.content
-          ?.filter((c: any) => c.type === "text")
-          ?.map((c: any) => c.text)
-          ?.join("\n") || "No external context available.";
-        console.log("Company context retrieved successfully");
-      } else {
-        const errorText = await contextResponse.text();
-        console.error("Context search failed:", contextResponse.status, errorText);
-        // Continue without context - don't fail the whole request
+        if (contextResponse.ok) {
+          const contextData = await contextResponse.json();
+          companyContext = contextData.choices?.[0]?.message?.content || "No external context available.";
+          console.log("Company context retrieved via Perplexity");
+        } else {
+          const errorText = await contextResponse.text();
+          console.error("Perplexity context search failed:", contextResponse.status, errorText);
+          // Continue without context - don't fail the whole request
+        }
+      } catch (contextError) {
+        console.error("Perplexity context search error:", contextError);
+        // Continue without context
       }
-    } catch (contextError) {
-      console.error("Context search error:", contextError);
-      // Continue without context
+    } else {
+      console.warn("PERPLEXITY_API_KEY not set — skipping company context step");
     }
-
-    // Longer delay to avoid rate limiting between calls (10 seconds)
-    await new Promise(resolve => setTimeout(resolve, 10000));
 
     // Step 2: Generate insights with the combined data (no web search needed here)
 
@@ -265,7 +263,7 @@ Format your response as:
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
+        model: "claude-opus-4-7",
         max_tokens: 2048,
         system: systemPrompt,
         messages: [
