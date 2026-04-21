@@ -3,6 +3,7 @@ import { isAdminUser } from '../constants';
 import { supabase } from '../lib/supabaseClient';
 import { getWelcomeSurveyScaleData, CompanyFilter, buildCompanyFilter } from '../lib/dataFetcher';
 import { CountUp, AnimatedProgressBar, HoverCard } from './Animations';
+import { Select } from './brand/Select';
 import { 
   Users, 
   Briefcase, 
@@ -295,17 +296,16 @@ const ScaleBaselineDashboard: React.FC = () => {
 
         {/* Program Selector */}
         {programs.length > 1 && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-gray-400 uppercase">Program:</span>
-            <select
+          <div className="min-w-[200px]">
+            <Select
+              label="Program"
               value={selectedProgram}
               onChange={(e) => setSelectedProgram(e.target.value)}
-              className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 ring-boon-purple/30 shadow-sm cursor-pointer hover:border-boon-purple/50 transition"
             >
               {programs.map(p => (
                 <option key={p} value={p}>{p}</option>
               ))}
-            </select>
+            </Select>
           </div>
         )}
       </div>

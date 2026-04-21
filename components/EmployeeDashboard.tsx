@@ -598,15 +598,16 @@ const EmployeeDashboard: React.FC = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-          <select
-            value={filterProgram}
-            onChange={(e) => setFilterProgram(e.target.value)}
-            className="w-full sm:w-auto px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 ring-boon-blue/30"
-          >
-            {programs.map(prog => (
-              <option key={prog} value={prog}>{prog === 'All' ? 'All Programs' : prog}</option>
-            ))}
-          </select>
+          <div className="w-full sm:w-auto sm:min-w-[180px]">
+            <Select
+              value={filterProgram}
+              onChange={(e) => setFilterProgram(e.target.value)}
+            >
+              {programs.map(prog => (
+                <option key={prog} value={prog}>{prog === 'All' ? 'All Programs' : prog}</option>
+              ))}
+            </Select>
+          </div>
 
           <button 
             onClick={() => setShowBatchUpload(true)}

@@ -8,6 +8,7 @@ import ExecutiveSignals from './ExecutiveSignals';
 import { AnimatedBarChart, AnimatedProgressBar, CountUp } from './Animations';
 import { Headline } from './brand/Headline';
 import { Eyebrow } from './brand/Eyebrow';
+import { Select } from './brand/Select';
 import { BarChart, AlertCircle, Clock, Info, MessageSquareQuote, ChevronDown, ChevronUp } from 'lucide-react';
 import { ScaleTestimonialsSection } from './ScaleDashboard';
 
@@ -325,15 +326,16 @@ const ImpactDashboard: React.FC<ImpactDashboardProps> = ({ programTypeFilter }) 
           </p>
         </div>
 
-        <select
-          value={selectedProgram}
-          onChange={(e) => setSelectedProgram(e.target.value)}
-          className="w-full md:w-auto px-4 py-2 border border-[#E5E7EB] rounded-lg text-sm bg-white text-[#374151] focus:outline-none focus:ring-2 focus:ring-[#466FF6]/20 min-w-[200px]"
-        >
-          {programs.map(p => (
-            <option key={p} value={p}>{p === 'All Programs' ? 'All Programs' : getDisplayName(p)}</option>
-          ))}
-        </select>
+        <div className="w-full md:w-auto md:min-w-[220px]">
+          <Select
+            value={selectedProgram}
+            onChange={(e) => setSelectedProgram(e.target.value)}
+          >
+            {programs.map(p => (
+              <option key={p} value={p}>{p === 'All Programs' ? 'All Programs' : getDisplayName(p)}</option>
+            ))}
+          </Select>
+        </div>
       </div>
 
       {/* ExecutiveSignals hidden for now
