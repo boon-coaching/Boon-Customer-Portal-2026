@@ -624,7 +624,7 @@ const BaselineDashboard: React.FC<BaselineDashboardProps> = ({ programTypeFilter
       ) : (
         <>
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 md:gap-6">
                 <KPICard 
                     title="Participants" 
                     value={stats.count} 
@@ -834,11 +834,11 @@ const KPICard = ({ title, value, icon, color, textColor, subtext, isText, benchm
     
     return (
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
-            <div className={`p-3 rounded-xl ${color}`}>
+            <div className={`p-3 rounded-xl ${color} shrink-0`}>
                 {icon}
             </div>
-            <div className="overflow-hidden flex-1">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide truncate">{title}</p>
+            <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide leading-tight" title={title}>{title}</p>
                 <div className={`font-black ${textColor} ${isText ? 'text-lg truncate' : 'text-3xl'}`}>
                     {value} 
                     {subtext && <span className="text-sm text-gray-300 font-medium ml-1">{subtext}</span>}
