@@ -504,7 +504,7 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({ programTypeFilter }) => {
     // Calculate growth from competency scores (only using rows with BOTH pre AND post)
     const totalPre = participantsWithBothScores.reduce((acc, curr) => acc + curr.pre, 0);
     const totalPost = participantsWithBothScores.reduce((acc, curr) => acc + curr.post, 0);
-    const growthPct = totalPre > 0 ? ((totalPost - totalPre) / totalPre) * 100 : 0;
+    const growthPct = totalPre > 0 ? Math.round(((totalPost - totalPre) / totalPre) * 100) : 0;
 
     // Filter surveys by program_title (for accurate NPS/CSAT per cohort)
     const validEmails = new Set(
