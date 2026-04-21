@@ -14,9 +14,12 @@ import React, { HTMLAttributes, ReactNode, useEffect } from 'react';
  *   children  body content
  *   footer    optional action row
  *
- * Sizes: sm (max-w-sm), md (max-w-lg, default), lg (max-w-2xl).
+ * Sizes: sm (max-w-sm), md (max-w-lg, default), lg (max-w-2xl),
+ *        xl (max-w-4xl), 2xl (max-w-6xl).
  *
- * Source: Boon Design System.
+ * Source: Boon Design System (xl/2xl sizes added locally to support
+ * wider modals like CSV upload and duplicate-merge review; should be
+ * propagated back to the upstream DS repo).
  *
  * Example:
  *   <Modal open={open} onClose={close} title="Add employee">
@@ -24,7 +27,7 @@ import React, { HTMLAttributes, ReactNode, useEffect } from 'react';
  *   </Modal>
  */
 
-type Size = 'sm' | 'md' | 'lg';
+type Size = 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 
 interface Props extends Omit<HTMLAttributes<HTMLDivElement>, 'title'> {
   open: boolean;
@@ -40,6 +43,8 @@ const sizeClasses: Record<Size, string> = {
   sm: 'max-w-sm',
   md: 'max-w-lg',
   lg: 'max-w-2xl',
+  xl: 'max-w-4xl',
+  '2xl': 'max-w-6xl',
 };
 
 export function Modal({
