@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useAnalytics, AnalyticsEvents } from '../lib/useAnalytics';
+import { Avatar } from './brand/Avatar';
 import { 
   Users, 
   Calendar, 
@@ -283,9 +284,7 @@ const ManagerDashboard: React.FC = () => {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-gradient-to-br from-boon-blue to-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                        {employee.first_name?.[0]}{employee.last_name?.[0]}
-                      </div>
+                      <Avatar name={fullName} size="lg" />
                       <div>
                         <p className="font-medium text-gray-900">{fullName}</p>
                         <p className="text-sm text-gray-500">
@@ -403,9 +402,7 @@ const EmployeeDetailModal: React.FC<EmployeeDetailModalProps> = ({
         <div className="p-6 border-b border-gray-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-gradient-to-br from-boon-blue to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                {employee.first_name?.[0]}{employee.last_name?.[0]}
-              </div>
+              <Avatar name={fullName} size="xl" />
               <div>
                 <h2 className="text-xl font-bold text-gray-900">{fullName}</h2>
                 <p className="text-gray-500">{employee.job_title || employee.coaching_program || 'Team Member'}</p>

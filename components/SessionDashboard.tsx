@@ -29,6 +29,7 @@ import ExecutiveSignals from './ExecutiveSignals';
 import { Headline } from './brand/Headline';
 import { Eyebrow } from './brand/Eyebrow';
 import { Badge } from './brand/Badge';
+import { Avatar } from './brand/Avatar';
 
 // --- Program Display Name Mapping ---
 const programDisplayNames: Record<string, string> = {
@@ -1389,13 +1390,12 @@ const EmployeeDetailModal = ({
           {/* Modal Header */}
           <div className="p-4 sm:p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-boon-blue flex items-center justify-center text-white font-bold text-lg sm:text-xl overflow-hidden shadow-md border-2 border-white ring-2 ring-boon-blue/10">
-                    {employee.avatar_url ? (
-                        <img src={employee.avatar_url} alt={employee.name} className="w-full h-full object-cover"/>
-                    ) : (
-                        employee.name.substring(0,2).toUpperCase()
-                    )}
-                </div>
+                <Avatar
+                  name={employee.name}
+                  src={employee.avatar_url}
+                  size="lg"
+                  className="shadow-md border-2 border-white ring-2 ring-boon-blue/10"
+                />
                 <div>
                    <h2 className="text-lg sm:text-xl font-black text-boon-dark">{employee.name}</h2>
                    <div className="flex items-center gap-2 text-sm font-medium text-gray-500 mt-0.5">
