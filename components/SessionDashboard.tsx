@@ -822,27 +822,28 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
         />
       )}
 
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-        <div>
-          <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-2">
-            <h1 className="text-2xl md:text-4xl font-extrabold text-boon-dark tracking-tight uppercase">{displayTitle}</h1>
-            {filterType !== 'all' && (
-              <span className="bg-boon-blue/10 text-boon-blue px-3 py-1 md:px-4 md:py-1.5 rounded-full text-xs md:text-sm font-bold uppercase tracking-wide flex items-center gap-1.5 shadow-sm">
-                 <Layers size={14} className="md:w-4 md:h-4" />
-                 <span className="truncate max-w-[200px]">{displaySubtitle}</span>
-              </span>
-            )}
-          </div>
-          <p className="text-gray-500 font-medium flex flex-wrap items-center gap-2 text-xs md:text-sm">
-             Viewing {totalEmployees} employees in {filterType === 'all' ? 'total' : 'this program'}
-             <span className="text-gray-300 hidden md:inline">|</span>
-             <span className="flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5" />
-                {totalSessions} total sessions
-             </span>
-          </p>
+      {/* Brand-v2 page header: eyebrow + DM Sans headline with DM Serif Text italic kicker + summary */}
+      <div className="pt-2">
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <span className="inline-block w-5 h-px bg-boon-primary"></span>
+          <span className="font-body font-extrabold text-[10.5px] tracking-[0.18em] uppercase text-gray-500">
+            {filterType === 'all' ? 'All sessions' : 'Session tracking'}
+          </span>
+          {filterType !== 'all' && (
+            <span className="bg-boon-blue/10 text-boon-blue px-2.5 py-0.5 rounded-md text-[10.5px] font-body font-extrabold uppercase tracking-[0.12em] flex items-center gap-1.5">
+              <Layers size={12} />
+              <span className="truncate max-w-[220px]">{displaySubtitle}</span>
+            </span>
+          )}
         </div>
+        <h1 className="font-display font-extrabold text-3xl md:text-[40px] leading-[1.08] tracking-[-0.02em] text-boon-navy">
+          Your team's coaching,{' '}
+          <span className="font-serif italic font-normal text-boon-primary">measured.</span>
+        </h1>
+        <p className="font-body text-[15px] leading-[1.55] text-gray-500 mt-3 max-w-[62ch]">
+          <b className="font-semibold text-boon-navy">{totalEmployees} {totalEmployees === 1 ? 'leader' : 'leaders'}</b> in {filterType === 'all' ? 'the program' : 'this cohort'},{' '}
+          <b className="font-semibold text-boon-navy">{totalSessions}</b> {totalSessions === 1 ? 'session' : 'sessions'} tracked to date.
+        </p>
       </div>
 
       {/* ExecutiveSignals hidden for now
