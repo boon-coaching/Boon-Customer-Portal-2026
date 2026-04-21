@@ -1,0 +1,58 @@
+/*
+ * Boon color tokens
+ *
+ * Source of truth for every Boon hex. Never hardcode a color value
+ * in a component; reference these CSS variables instead.
+ *
+ * Imported from the canonical Boon Design System
+ * (asimmons-coder/boon-design-system). Keep in lockstep with upstream.
+ */
+
+:root {
+  /* Primary blue */
+  --boon-blue: #466FF6;
+  --boon-blue-dark: #365ABD;
+  --boon-blue-light: #CCD9FF;
+
+  /* Coral (marketing CTAs, warmth accent) */
+  --boon-coral: #FF6D6A;
+  --boon-coral-light: #FF8D80;
+  --boon-coral-soft: #FFBBBB;
+
+  /* Navy (authority surfaces, marketing dark mode) */
+  --boon-navy: #1A253B;
+  --boon-navy-deep: #111A2B;
+
+  /* Neutrals */
+  --boon-charcoal: #2E353D;
+  --boon-off-white: #F0F3F7;
+  --boon-white: #FFFFFF;
+
+  /* Data viz accent palette (product mode) */
+  --boon-purple: #C47ACC;
+  --boon-gold: #FFC969;
+  --boon-green: #6CD893;
+
+  /* Status / system feedback */
+  --boon-success: var(--boon-green);
+  --boon-warning: #D97706;
+  --boon-warning-light: #FEF3C7;
+  --boon-warning-dark: #B45309;
+  --boon-error: var(--boon-coral);
+
+  /*
+   * Product colors (SCALE / GROW / EXEC / TOGETHER / ADAPT).
+   * Source of truth: marketing site components/ui/ProductIcon.tsx.
+   * Each product has a primary and accent pair.
+   */
+  --boon-product-scale: #466FF6;
+  --boon-product-scale-accent: #93C5FD;
+  --boon-product-grow: #FF8D80;
+  --boon-product-grow-accent: #FFBBBB;
+  --boon-product-exec: #2E353D;
+  --boon-product-exec-accent: #C9A55C;
+  --boon-product-together: #FDB022;
+  --boon-product-together-accent: #FDE68A;
+  --boon-product-adapt: #C47ACC;
+  --boon-product-adapt-accent: #E8B4EC;
+}

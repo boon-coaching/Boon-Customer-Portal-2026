@@ -1,6 +1,10 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
+// Boon Design System tokens. Load before App so every component that
+// references --boon-* CSS variables can resolve them.
+import './styles/tokens/colors.css';
+import './styles/tokens/typography.css';
 
 interface ErrorBoundaryProps {
   children?: React.ReactNode;
