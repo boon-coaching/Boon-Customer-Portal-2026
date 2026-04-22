@@ -704,7 +704,7 @@ const EmployeeDashboard: React.FC = () => {
 
         {/* Desktop View: Table */}
         <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full min-w-[1100px] text-left">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <SortableHeader 
