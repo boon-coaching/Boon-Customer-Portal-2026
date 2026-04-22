@@ -54,7 +54,7 @@ export const Select = forwardRef<HTMLSelectElement, Props>(function Select(
           'border-2 pr-10',
           hasError
             ? 'border-[var(--boon-coral)] focus:border-[var(--boon-coral)]'
-            : 'border-transparent focus:bg-white focus:border-[var(--boon-blue)]',
+            : 'border-gray-200 focus:bg-white focus:border-[var(--boon-blue)]',
           'text-[var(--boon-charcoal)] font-medium',
           'disabled:opacity-50 disabled:cursor-not-allowed',
           className,
