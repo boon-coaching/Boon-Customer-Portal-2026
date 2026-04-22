@@ -312,7 +312,7 @@ const ScaleBaselineDashboard: React.FC = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <SummaryCard
           icon={<Users className="w-5 h-5 text-boon-blue" />}
           label="PARTICIPANTS"
@@ -441,9 +441,9 @@ const ScaleBaselineDashboard: React.FC = () => {
 
 const SummaryCard = ({ icon, label, value, suffix, isText }: any) => (
   <HoverCard className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-    <div className="flex items-center gap-2 mb-3">
-      <div className="p-2 bg-gray-50 rounded-lg">{icon}</div>
-      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</span>
+    <div className="flex flex-col gap-2 mb-3">
+      <div className="p-2 bg-gray-50 rounded-lg w-fit">{icon}</div>
+      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider leading-tight">{label}</span>
     </div>
     <div className={`${isText ? 'text-lg' : 'text-3xl'} font-black text-boon-dark`}>
       {isText ? value : <CountUp end={value} duration={1500} decimals={0} />}
@@ -465,9 +465,9 @@ const SummaryCardWithBenchmark = ({ icon, label, value, benchmark, suffix }: {
 
   return (
     <HoverCard className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-      <div className="flex items-center gap-2 mb-3">
-        <div className="p-2 bg-gray-50 rounded-lg">{icon}</div>
-        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</span>
+      <div className="flex flex-col gap-2 mb-3">
+        <div className="p-2 bg-gray-50 rounded-lg w-fit">{icon}</div>
+        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider leading-tight">{label}</span>
       </div>
       <div className="text-3xl font-extrabold tabular-nums text-boon-dark">
         <CountUp end={value} duration={1500} decimals={1} />
