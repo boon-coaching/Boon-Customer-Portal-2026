@@ -264,7 +264,7 @@ const ThemesDashboard: React.FC<ThemesDashboardProps> = ({ programTypeFilter }) 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-12">
       {/* Brand v2 page header (Boon Design System: Eyebrow + Headline) */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
         <div className="pt-2">
           <Eyebrow>Coaching themes</Eyebrow>
           <Headline
@@ -277,9 +277,9 @@ const ThemesDashboard: React.FC<ThemesDashboardProps> = ({ programTypeFilter }) 
           </p>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+        <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto flex-wrap">
           {/* Program Filter Dropdown */}
-          <div className="min-w-[200px]">
+          <div className="min-w-[180px]">
             <Select
               value={selectedProgram}
               onChange={(e) => setSelectedProgram(e.target.value)}
