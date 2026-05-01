@@ -860,6 +860,31 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({ programTypeFilter }) => {
     };
   }, [sessions, competencies, surveys, employees, welcomeSurveys, baselineData, focusAreas, selectedCohort, programConfig, companyName, programTypeFilter]);
 
+  // Derive program-type prefix for the page eyebrow.
+  // Avoids hardcoding "Grow," for clients who run Exec or Scale programs.
+  const eyebrowLabel = useMemo(() => {
+    const detect = (s: string): string | null => {
+      const u = (s || '').toUpperCase();
+      if (u.includes('EXEC')) return 'Exec';
+      if (u.includes('GROW')) return 'Grow';
+      if (u.includes('SCALE')) return 'Scale';
+      if (u.includes('TOGETHER')) return 'Together';
+      if (u.includes('ADAPT')) return 'Adapt';
+      return null;
+    };
+    if (selectedCohort && selectedCohort !== 'All Cohorts') {
+      const t = detect(selectedCohort);
+      if (t) return `${t}, Leadership program overview`;
+    }
+    const types = new Set(
+      programConfig.map(p => detect((p as any).program_title || '')).filter(Boolean) as string[]
+    );
+    if (types.size === 1) {
+      return `${Array.from(types)[0]}, Leadership program overview`;
+    }
+    return 'Leadership program overview';
+  }, [selectedCohort, programConfig]);
+
   if (loading) {
     return (
       <div className="p-8 max-w-7xl mx-auto">
@@ -873,7 +898,7 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({ programTypeFilter }) => {
 
       {/* Brand v2 page header (Boon Design System: Eyebrow + Headline) */}
       <div className="pt-2">
-        <Eyebrow>Grow, Leadership program overview</Eyebrow>
+        <Eyebrow>{eyebrowLabel}</Eyebrow>
         <Headline statement="Growth that" kicker="compounds." />
         <p className="font-body text-[15px] leading-[1.55] text-gray-500 mt-3 max-w-[62ch]">
           Welcome back, <b className="font-semibold text-boon-navy">{firstName || companyName.split(' - ')[0]}</b>.
@@ -942,7 +967,7 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({ programTypeFilter }) => {
             </div>
             <p className="text-xl md:text-2xl text-gray-600 font-medium">through the program</p>
             <p className="text-sm text-gray-400 mt-6 font-medium">
-                {stats.sessionsUsedCount} of {stats.targetSessions} expected sessions used ({stats.totalEmployeesCount} employees × {stats.sessionsPerEmployee} sessions)
+                {stats.sessionsUsedCount} of {stats.targetSessions} billable sessions delivered ({stats.totalEmployeesCount} employees × {stats.sessionsPerEmployee} sessions)
             </p>
         </HoverCard>
       )}
