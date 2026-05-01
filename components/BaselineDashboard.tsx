@@ -240,9 +240,11 @@ const BaselineDashboard: React.FC<BaselineDashboardProps> = ({ programTypeFilter
 
       const avg = validValues.reduce((a, b) => a + b, 0) / validValues.length;
 
-      // Check if data is on 1-5 scale and scale to 1-10
-      // Use average <= 5.5 as indicator (more robust than max, handles outliers)
-      const scaledAvg = avg <= 5.5 ? avg * 2 : avg;
+      // Only scale up if data is unambiguously on 1-5 scale (max <= 5).
+      // Avoids the bug where 1-10 data with a low average (e.g. work_life_balance ~5.25)
+      // gets doubled past 10.
+      const maxVal = Math.max(...validValues);
+      const scaledAvg = maxVal <= 5 ? avg * 2 : avg;
 
       return { key, label: key.replace(/_/g, ' '), value: scaledAvg, hasData: true };
     });

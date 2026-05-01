@@ -482,40 +482,60 @@ const MainPortalLayout: React.FC = () => {
           Sentry.setTag('program_type', 'Scale (default)');
         }
 
-        // Fetch program titles for sidebar from sessions data - filtered by company
+        // Fetch program titles for sidebar. Prefer program_config (canonical source),
+        // fall back to session_tracking only when program_config is empty for this company.
+        // This prevents the sidebar from showing duplicate variant strings like
+        // "Enviromatic System - EXEC", "CP-0022", "Enviromatic Systems GROW Program"
+        // all at once when only 2 real programs exist.
         let foundPrograms: string[] = [];
         try {
-          // Build query with company filter
-          let sessionQuery = supabase
-            .from('session_tracking')
+          let configQuery = supabase
+            .from('program_config')
             .select('program_title');
-          
-          // Apply company filter at query level
+
           if (companyId) {
-            sessionQuery = sessionQuery.eq('company_id', companyId);
+            configQuery = configQuery.eq('company_id', companyId);
           } else if (companyBase) {
-            sessionQuery = sessionQuery.ilike('account_name', `%${companyBase}%`);
+            configQuery = configQuery.ilike('account_name', `%${companyBase}%`);
           }
 
-          const { data: sessionPrograms, error: sessionError } = await sessionQuery;
+          const { data: configPrograms } = await configQuery;
 
-          if (!sessionError && sessionPrograms && sessionPrograms.length > 0) {
+          if (configPrograms && configPrograms.length > 0) {
             foundPrograms = [...new Set(
-              sessionPrograms.map(s => s.program_title)
-                .filter(p => p && p.trim().length > 0)
+              configPrograms.map((p: any) => p.program_title)
+                .filter((p: any) => p && p.trim().length > 0)
             )] as string[];
+          }
 
-            // Set programs immediately when found
-            if (foundPrograms.length > 0) {
-              setPrograms(foundPrograms.sort());
+          // Fallback for legacy clients with no program_config rows
+          if (foundPrograms.length === 0) {
+            let sessionQuery = supabase
+              .from('session_tracking')
+              .select('program_title');
+
+            if (companyId) {
+              sessionQuery = sessionQuery.eq('company_id', companyId);
+            } else if (companyBase) {
+              sessionQuery = sessionQuery.ilike('account_name', `%${companyBase}%`);
+            }
+
+            const { data: sessionPrograms, error: sessionError } = await sessionQuery;
+
+            if (!sessionError && sessionPrograms && sessionPrograms.length > 0) {
+              foundPrograms = [...new Set(
+                sessionPrograms.map((s: any) => s.program_title)
+                  .filter((p: any) => p && p.trim().length > 0)
+              )] as string[];
             }
           }
+
+          if (foundPrograms.length > 0) {
+            setPrograms(foundPrograms.sort());
+          }
         } catch (progErr) {
-          console.error('Error fetching programs from sessions:', progErr);
+          console.error('Error fetching programs:', progErr);
         }
-        
-        // Note: program_config fallback removed due to RLS/API key issues
-        // Programs are now sourced only from session_tracking table
       } catch (err) {
         console.error('Error fetching metadata:', err);
         Sentry.captureException(err);
