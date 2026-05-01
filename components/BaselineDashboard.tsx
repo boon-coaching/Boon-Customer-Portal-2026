@@ -247,8 +247,10 @@ const BaselineDashboard: React.FC<BaselineDashboardProps> = ({ programTypeFilter
       return { key, label: key.replace(/_/g, ' '), value: scaledAvg, hasData: true };
     });
 
-    // 3. Competencies (Average) from competency_scores table - keep on 1-5 scale
-    // Filter competencies by the same cohort filter
+    // 3. Competencies (Average) - prefer competency_scores, fall back to welcome_survey_baseline.
+    //    GROW ratings live in comp_* columns; EXEC ratings live in custom_competencies JSONB.
+    const compMap = new Map<string, { sum: number; count: number }>();
+
     const cohortCompetencies = baselineCompetencies.filter(c => {
       const pt = c.program_title || '';
       if (selectedCohort === 'All Programs') {
@@ -256,22 +258,62 @@ const BaselineDashboard: React.FC<BaselineDashboardProps> = ({ programTypeFilter
       }
       return pt.toLowerCase() === selectedCohort.toLowerCase();
     });
-    
-    // Aggregate by competency name
-    const compMap = new Map<string, { sum: number; count: number }>();
+
     cohortCompetencies.forEach(c => {
       const name = c.competency_name;
       const score = Number(c.score);
       if (!isNaN(score) && score > 0) {
-        if (!compMap.has(name)) {
-          compMap.set(name, { sum: 0, count: 0 });
-        }
+        if (!compMap.has(name)) compMap.set(name, { sum: 0, count: 0 });
         const entry = compMap.get(name)!;
         entry.sum += score;
         entry.count++;
       }
     });
-    
+
+    // Fallback: derive from welcome survey when competency_scores has nothing for this cohort
+    if (compMap.size === 0) {
+      const GROW_COMP_LABELS: Record<string, string> = {
+        comp_effective_communication: 'Effective Communication',
+        comp_persuasion_and_influence: 'Persuasion & Influence',
+        comp_adaptability_and_resilience: 'Adaptability & Resilience',
+        comp_strategic_thinking: 'Strategic Thinking',
+        comp_emotional_intelligence: 'Emotional Intelligence',
+        comp_building_relationships_at_work: 'Building Relationships',
+        comp_self_confidence_and_imposter_syndrome: 'Confidence & Imposter Syndrome',
+        comp_delegation_and_accountability: 'Delegation & Accountability',
+        comp_giving_and_receiving_feedback: 'Giving & Receiving Feedback',
+        comp_effective_planning_and_execution: 'Planning & Execution',
+        comp_change_management: 'Change Management',
+        comp_time_management_and_productivity: 'Time Management',
+      };
+
+      filtered.forEach(d => {
+        Object.entries(GROW_COMP_LABELS).forEach(([key, label]) => {
+          const v = Number((d as any)[key]);
+          if (!isNaN(v) && v > 0) {
+            if (!compMap.has(label)) compMap.set(label, { sum: 0, count: 0 });
+            const entry = compMap.get(label)!;
+            entry.sum += v;
+            entry.count++;
+          }
+        });
+
+        const custom = (d as any).custom_competencies;
+        if (custom && typeof custom === 'object') {
+          Object.entries(custom).forEach(([label, rawValue]) => {
+            const v = Number(rawValue);
+            // -1 indicates "selected as focus area" (not a rating); skip
+            if (!isNaN(v) && v > 0 && v <= 5) {
+              if (!compMap.has(label)) compMap.set(label, { sum: 0, count: 0 });
+              const entry = compMap.get(label)!;
+              entry.sum += v;
+              entry.count++;
+            }
+          });
+        }
+      });
+    }
+
     const compAvgs = Array.from(compMap.entries()).map(([label, data]) => ({
       key: label,
       label,

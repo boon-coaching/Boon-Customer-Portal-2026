@@ -271,19 +271,39 @@ const ImpactDashboard: React.FC<ImpactDashboardProps> = ({ programTypeFilter }) 
                  return bPt === selNorm || bCoh === selNorm || bComp === selNorm || (bCoh && selNorm.includes(bCoh));
             });
             
-        // Use the COMPETENCY_MAP to extract comp_* fields
-        baselineStats = Object.entries(COMPETENCY_MAP).map(([key, label]) => {
+        // GROW: aggregate comp_* fixed columns
+        const growStats = Object.entries(COMPETENCY_MAP).map(([key, label]) => {
             const values = filteredBaseline
                 .map(r => Number((r as any)[key]))
                 .filter(v => !isNaN(v) && v > 0);
-            
-            const avg = values.length > 0 
-                ? values.reduce((a,b) => a+b, 0) / values.length 
+
+            const avg = values.length > 0
+                ? values.reduce((a,b) => a+b, 0) / values.length
                 : 0;
             return { label, avg: Math.round(avg * 10) / 10 };
-        })
-        .filter(c => c.avg > 0)
-        .sort((a, b) => a.avg - b.avg); // Sort lowest first (opportunities for growth)
+        }).filter(c => c.avg > 0);
+
+        // EXEC: aggregate custom_competencies JSONB. Skip -1 sentinel (focus selection, not rating).
+        const execMap = new Map<string, { sum: number; count: number }>();
+        filteredBaseline.forEach(r => {
+            const custom = (r as any).custom_competencies;
+            if (!custom || typeof custom !== 'object') return;
+            Object.entries(custom).forEach(([label, rawValue]) => {
+                const v = Number(rawValue);
+                if (!isNaN(v) && v > 0 && v <= 5) {
+                    if (!execMap.has(label)) execMap.set(label, { sum: 0, count: 0 });
+                    const entry = execMap.get(label)!;
+                    entry.sum += v;
+                    entry.count++;
+                }
+            });
+        });
+        const execStats = Array.from(execMap.entries()).map(([label, data]) => ({
+            label,
+            avg: Math.round((data.sum / data.count) * 10) / 10,
+        }));
+
+        baselineStats = [...growStats, ...execStats].sort((a, b) => a.avg - b.avg); // Sort lowest first (opportunities for growth)
     }
 
     return {
