@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { isAdminUser } from '../constants';
-import { getDashboardSessions, getEmployeeRoster, getSurveyResponses, getProgramConfig, CompanyFilter, buildCompanyFilter } from '../lib/dataFetcher';
+import { getDashboardSessions, getEmployeeRoster, getSurveyResponses, getProgramConfig, CompanyFilter, buildCompanyFilter, resolveProgramTitle } from '../lib/dataFetcher';
 import { SessionWithEmployee, Employee, SurveyResponse } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { useAnalytics, AnalyticsEvents } from '../lib/useAnalytics';
@@ -513,6 +513,15 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
     };
   }, [programConfigs]);
 
+  // Row-level resolver: prefers a populated title field, falls back to the
+  // program_config lookup keyed by salesforce_program_id. Catches employees
+  // whose SF sync only set salesforce_program_id (so coaching_program /
+  // program_name / program_title were all NULL and they showed as Unassigned).
+  const resolveProgram = (row: any): string => {
+    const resolved = resolveProgramTitle(row, programConfigs);
+    return resolved ? normalizeProgram(resolved) : 'Unassigned';
+  };
+
   // --- Aggregation Logic ---
   const aggregatedStats = useMemo(() => {
     const statsMap = new Map<string, {
@@ -548,7 +557,7 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
       if (existingKey) {
         // Merge with existing - prefer the one with a program assigned
         const existing = statsMap.get(existingKey)!;
-        const newProgram = normalizeProgram(emp.coaching_program || emp.program_name);
+        const newProgram = resolveProgram(emp);
         if (existing.program === 'Unassigned' && newProgram !== 'Unassigned') {
           existing.program = newProgram;
           existing.cohort = emp.cohort || emp.program_name || existing.cohort;
@@ -567,7 +576,7 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
         statsMap.set(key, {
           id: emp.id,
           name: name,
-          program: normalizeProgram(emp.coaching_program || emp.program_name),
+          program: resolveProgram(emp),
           cohort: emp.cohort || emp.program_name || '',
           avatar_url: emp.avatar_url,
           completed: 0,
@@ -616,7 +625,7 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
         statsMap.set(key, {
           id: session.employee_id || session.id,
           name: name,
-          program: normalizeProgram(sessionProgram),
+          program: resolveProgram(session),
           cohort: sessionCohort,
           avatar_url: emp?.avatar_url,
           completed: 0,
@@ -633,7 +642,8 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
       const entry = statsMap.get(matchedKey)!;
       if (!entry.cohort && sessionCohort) entry.cohort = sessionCohort;
       // Always use session's program_title - it's the source of truth for session counts
-      if (sessionProgram) entry.program = normalizeProgram(sessionProgram);
+      const resolved = resolveProgram(session);
+      if (resolved && resolved !== 'Unassigned') entry.program = resolved;
       if (!entry.email && email) entry.email = email;
       entry.status = 'active';
       // Session data takes precedence for name (since it has sessions tied to it)
@@ -681,8 +691,8 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
         if (existing.total === 0) {
           existing.status = 'pending_match';
           existing.welcomeSurveyDate = new Date(ws.created_at);
-          if (existing.program === 'Unassigned' && ws.program_title) {
-            existing.program = normalizeProgram(ws.program_title);
+          if (existing.program === 'Unassigned' && (ws.program_title || ws.salesforce_program_id)) {
+            existing.program = resolveProgram(ws);
           }
         }
       } else {
@@ -691,7 +701,7 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
         statsMap.set(key, {
           id: `ws-${ws.id}`,
           name: name,
-          program: normalizeProgram(ws.program_title),
+          program: resolveProgram(ws),
           cohort: '',
           completed: 0,
           noshow: 0,
@@ -706,7 +716,7 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
     });
 
     return Array.from(statsMap.values());
-  }, [sessions, employees, welcomeSurveys, filterType, filterValue, hiddenEmployees, normalizeProgram]);
+  }, [sessions, employees, welcomeSurveys, filterType, filterValue, hiddenEmployees, normalizeProgram, programConfigs]);
 
   // Get unique programs for filter dropdown
   const availablePrograms = useMemo(() => {

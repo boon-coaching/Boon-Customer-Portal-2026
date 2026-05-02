@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { isAdminUser } from '../constants';
-import { getDashboardSessions, getProgramConfig, CompanyFilter, buildCompanyFilter } from '../lib/dataFetcher';
+import { getDashboardSessions, getProgramConfig, CompanyFilter, buildCompanyFilter, createCohortMatcher } from '../lib/dataFetcher';
 import { SessionWithEmployee, ProgramConfig } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { useAnalytics, AnalyticsEvents } from '../lib/useAnalytics';
@@ -130,30 +130,16 @@ const ThemesDashboard: React.FC<ThemesDashboardProps> = ({ programTypeFilter }) 
     else if (timeRange === '12M') cutoffDate.setMonth(now.getMonth() - 12);
     else cutoffDate.setFullYear(1900); // ALL
 
-    // Helper to check if a program matches the programTypeFilter
-    const matchesProgramFilter = (programTitle: string) => {
-      if (!programTypeFilter) return true;
-      return programTitle?.toUpperCase().includes(programTypeFilter);
-    };
+    const matchesCohort = createCohortMatcher(programConfig, selectedProgram, programTypeFilter);
 
-    // 1. Filter sessions by time range AND program
+    // 1. Filter sessions by time range AND cohort (matches title or sf id)
     const validSessions = sessions.filter(s => {
       const d = new Date(s.session_date);
       const status = (s.status || '').toLowerCase();
-      // Only Completed sessions within time range
       const isCompleted = !status.includes('no show') &&
                           !status.includes('late cancel') &&
                           (status.includes('completed') || (status === '' && d < now));
-
-      // Filter by program if selected
-      const sessionProgram = (s as any).program_title || '';
-      if (selectedProgram !== 'All Cohorts') {
-        if (sessionProgram !== selectedProgram) return false;
-      } else {
-        // When "All Cohorts", still filter by programTypeFilter if set
-        if (!matchesProgramFilter(sessionProgram)) return false;
-      }
-
+      if (!matchesCohort(s)) return false;
       return isCompleted && d >= cutoffDate && d <= now;
     });
 
@@ -235,7 +221,7 @@ const ThemesDashboard: React.FC<ThemesDashboardProps> = ({ programTypeFilter }) 
       topComms: getTopThemes(subThemes.comms),
       totalSessions: validSessions.length
     };
-  }, [sessions, timeRange, selectedProgram, programTypeFilter]);
+  }, [sessions, timeRange, selectedProgram, programTypeFilter, programConfig]);
 
   if (loading) {
     return (

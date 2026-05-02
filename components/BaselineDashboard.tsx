@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { isAdminUser } from '../constants';
-import { getWelcomeSurveyData, getWelcomeSurveyScaleData, getProgramConfig, getFocusAreaSelections, getBaselineCompetencyScores, getEmployeeRoster, getPrograms, CompanyFilter, buildCompanyFilter, Program } from '../lib/dataFetcher';
+import { getWelcomeSurveyData, getWelcomeSurveyScaleData, getProgramConfig, getFocusAreaSelections, getBaselineCompetencyScores, getEmployeeRoster, getPrograms, CompanyFilter, buildCompanyFilter, createCohortMatcher, Program } from '../lib/dataFetcher';
 import { WelcomeSurveyEntry, ProgramConfig, FocusAreaSelection, CompetencyScoreRecord, Employee } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { useAnalytics, AnalyticsEvents } from '../lib/useAnalytics';
@@ -200,19 +200,11 @@ const BaselineDashboard: React.FC<BaselineDashboardProps> = ({ programTypeFilter
 
     const uniqueCohorts = ['All Programs', ...programNames];
 
-    // Helper to check if a program matches the programTypeFilter
-    const matchesProgramFilter = (programTitle: string) => {
-      if (!programTypeFilter) return true;
-      return programTitle?.toUpperCase().includes(programTypeFilter);
-    };
+    // Match welcome rows + competency_scores rows by program_title OR
+    // salesforce_program_id - SF sync is inconsistent about which it sets.
+    const matchesCohort = createCohortMatcher(programConfig, selectedCohort, programTypeFilter);
 
-    // Filter by program_title or cohort
-    const filtered = selectedCohort === 'All Programs'
-      ? data.filter(d => matchesProgramFilter((d as any).program_title || d.cohort || ''))
-      : data.filter(d => {
-          const pt = (d as any).program_title || d.cohort || '';
-          return pt === selectedCohort;
-        });
+    const filtered = data.filter(d => matchesCohort(d));
 
     if (filtered.length === 0) {
       return { 
@@ -253,13 +245,7 @@ const BaselineDashboard: React.FC<BaselineDashboardProps> = ({ programTypeFilter
     //    GROW ratings live in comp_* columns; EXEC ratings live in custom_competencies JSONB.
     const compMap = new Map<string, { sum: number; count: number }>();
 
-    const cohortCompetencies = baselineCompetencies.filter(c => {
-      const pt = c.program_title || '';
-      if (selectedCohort === 'All Programs') {
-        return matchesProgramFilter(pt);
-      }
-      return pt.toLowerCase() === selectedCohort.toLowerCase();
-    });
+    const cohortCompetencies = baselineCompetencies.filter(c => matchesCohort(c));
 
     cohortCompetencies.forEach(c => {
       const name = c.competency_name;
@@ -588,7 +574,7 @@ const BaselineDashboard: React.FC<BaselineDashboardProps> = ({ programTypeFilter
         subTopics: analyzeSubTopics(filtered)
       }
     };
-  }, [data, employees, selectedCohort, programsLookup, baselineCompetencies, programTypeFilter]);
+  }, [data, employees, selectedCohort, programsLookup, baselineCompetencies, programConfig, programTypeFilter]);
 
   // GROW company with data only in welcome_survey_scale — render SCALE-style baseline
   if (fallbackToScale) {

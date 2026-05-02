@@ -23,6 +23,7 @@ import {
   getPrograms,
   CompanyFilter,
   buildCompanyFilter,
+  createCohortMatcher,
   Program
 } from '../lib/dataFetcher';
 import { 
@@ -346,36 +347,14 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({ programTypeFilter }) => {
     const normalize = (str: string) => (str || '').toLowerCase().trim();
     const selNorm = normalize(selectedCohort);
 
-    // Helper to check if a program matches the programTypeFilter
+    // Helper retained for legacy filter sites further down (competency_scores
+    // etc.) that don't pass through the new cohort matcher yet.
     const matchesProgramFilter = (programTitle: string) => {
       if (!programTypeFilter) return true;
       return programTitle?.toUpperCase().includes(programTypeFilter);
     };
 
-    // Resolve the selected cohort to its canonical identity from program_config.
-    // Employee/session/welcome rows belong to a cohort if they match EITHER the
-    // canonical program_title OR the salesforce_program_id - some Salesforce
-    // sync paths only populate one or the other, so checking both prevents the
-    // employee count from under-reporting (was showing 2 of 5 GROW employees).
-    const cohortIdentity = (() => {
-      if (isAll) return null;
-      const match = programConfig.find(p =>
-        normalize((p as any).program_title || '') === selNorm
-      );
-      return {
-        title: ((match as any)?.program_title as string) || selectedCohort,
-        sfId: ((match as any)?.salesforce_program_id as string) || null,
-      };
-    })();
-
-    const matchesCohort = (row: any): boolean => {
-      const pt = row?.program_title || row?.coaching_program || '';
-      if (isAll) return matchesProgramFilter(pt);
-      if (!cohortIdentity) return false;
-      if (pt && normalize(pt) === normalize(cohortIdentity.title)) return true;
-      if (cohortIdentity.sfId && row?.salesforce_program_id === cohortIdentity.sfId) return true;
-      return false;
-    };
+    const matchesCohort = createCohortMatcher(programConfig, selectedCohort, programTypeFilter);
 
     // 1. Filter sessions to the selected cohort
     const cohortSessions = sessions.filter(s => matchesCohort(s));

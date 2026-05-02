@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { isAdminUser } from '../constants';
-import { getCompetencyScores, getWelcomeSurveyData, getSurveyResponses, getPrograms, CompanyFilter, buildCompanyFilter, Program } from '../lib/dataFetcher';
+import { getCompetencyScores, getWelcomeSurveyData, getSurveyResponses, getPrograms, getProgramConfig, CompanyFilter, buildCompanyFilter, createCohortMatcher, Program } from '../lib/dataFetcher';
 import { CompetencyScore, WelcomeSurveyEntry, SurveyResponse } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { useAnalytics, AnalyticsEvents } from '../lib/useAnalytics';
@@ -78,6 +78,7 @@ const ImpactDashboard: React.FC<ImpactDashboardProps> = ({ programTypeFilter }) 
   const [baselineData, setBaselineData] = useState<WelcomeSurveyEntry[]>([]);
   const [surveys, setSurveys] = useState<SurveyResponse[]>([]);
   const [programsLookup, setProgramsLookup] = useState<Program[]>([]);
+  const [programConfig, setProgramConfig] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedProgram, setSelectedProgram] = useState('All Programs');
@@ -124,12 +125,15 @@ const ImpactDashboard: React.FC<ImpactDashboardProps> = ({ programTypeFilter }) 
         // Build company filter using helper
         const companyFilter = buildCompanyFilter(companyId, accName, company);
 
-        const [compData, baseData, surveyData, programsData] = await Promise.all([
+        const [compData, baseData, surveyData, programsData, configData] = await Promise.all([
           getCompetencyScores(companyFilter),
           getWelcomeSurveyData(companyFilter),
           getSurveyResponses(companyFilter),
-          getPrograms(undefined, accName || company)
+          getPrograms(undefined, accName || company),
+          getProgramConfig(companyFilter)
         ]);
+
+        setProgramConfig(configData);
 
         // Data is already filtered by company at the query level
         setScores(compData);
@@ -190,20 +194,16 @@ const ImpactDashboard: React.FC<ImpactDashboardProps> = ({ programTypeFilter }) 
     const uniquePrograms = ['All Programs', ...allPrograms.sort()];
 
 
-    // Helper to check if a program matches the programTypeFilter
+    // Match by program_title OR salesforce_program_id (SF sync inconsistency).
+    const matchesCohort = createCohortMatcher(programConfig, selectedProgram, programTypeFilter);
+
+    // Helper kept for the baselineStats fallback below.
     const matchesProgramFilter = (programTitle: string) => {
       if (!programTypeFilter) return true;
       return programTitle?.toUpperCase().includes(programTypeFilter);
     };
 
-    // 2. Filter Impact Data by Program
-    const filteredScores = selectedProgram === 'All Programs'
-      ? scores.filter(s => matchesProgramFilter((s as any).program_title || ''))
-      : scores.filter(s => {
-          const pt = normalize((s as any).program_title || '');
-          const p = normalize(s.program || '');
-          return pt === selNorm || p === selNorm;
-        });
+    const filteredScores = scores.filter(s => matchesCohort(s));
 
     // 3. Aggregate by Competency (Impact) - only rows with BOTH pre AND post
     const compMap = new Map<string, { name: string, sumPre: number, sumPost: number, count: number }>();
@@ -262,14 +262,7 @@ const ImpactDashboard: React.FC<ImpactDashboardProps> = ({ programTypeFilter }) 
     let baselineStats: { label: string, avg: number }[] = [];
     if (!hasImpactData) {
         // Filter baseline data by program
-        const filteredBaseline = selectedProgram === 'All Programs'
-            ? baselineData.filter(b => matchesProgramFilter((b as any).program_title || ''))
-            : baselineData.filter(b => {
-                 const bPt = normalize((b as any).program_title || '');
-                 const bCoh = normalize(b.cohort);
-                 const bComp = normalize(b.company);
-                 return bPt === selNorm || bCoh === selNorm || bComp === selNorm || (bCoh && selNorm.includes(bCoh));
-            });
+        const filteredBaseline = baselineData.filter(b => matchesCohort(b));
             
         // GROW: aggregate comp_* fixed columns
         const growStats = Object.entries(COMPETENCY_MAP).map(([key, label]) => {
@@ -320,7 +313,7 @@ const ImpactDashboard: React.FC<ImpactDashboardProps> = ({ programTypeFilter }) 
       baselineStats,
       hasImpactData
     };
-  }, [scores, baselineData, selectedProgram, programTypeFilter, programsLookup]);
+  }, [scores, baselineData, selectedProgram, programTypeFilter, programsLookup, programConfig]);
 
   if (loading) return <div className="p-12 text-center text-gray-400">Loading impact data...</div>;
   if (error) return <div className="p-12 text-center text-red-500">{error}</div>;

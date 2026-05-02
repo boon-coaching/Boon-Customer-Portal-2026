@@ -58,15 +58,15 @@ export const clearDataCache = (): void => {
 
 /**
  * Filter options for company-scoped queries.
- * 
+ *
  * For single-company accounts (most customers):
  *   - Use companyId for exact company match
- * 
+ *
  * For multi-location accounts (e.g., Media Arts Lab):
  *   - Use companyId to get ALL locations
  *   - Use accountName to filter to a specific location
  *   - Use programTitle to filter to a specific program
- * 
+ *
  * Priority: companyId > accountName (companyId is preferred when both are set)
  */
 export interface CompanyFilter {
@@ -75,6 +75,76 @@ export interface CompanyFilter {
   programTitle?: string;   // Optional: filter to specific program within the company
   companyName?: string;    // Fallback company name for tables with unreliable company_id
 }
+
+// ============================================
+// COHORT MATCHING
+// ============================================
+
+/**
+ * Build a predicate that tells whether a row (employee, session, welcome
+ * survey, competency score, etc.) belongs to the selected cohort.
+ *
+ * Why this exists: Salesforce sync paths populate program identification
+ * inconsistently — some rows get `program_title` set, others only get
+ * `salesforce_program_id`. Filtering by program_title alone undercounts.
+ * The matcher resolves the selected cohort to its program_config row, then
+ * accepts any row that matches by canonical title OR sf id.
+ *
+ * Returns a predicate. Pass `null`/empty/`'All Cohorts'`/`'All Programs'`
+ * for `selectedCohort` to disable cohort filtering (predicate always true,
+ * subject to programTypeFilter when supplied).
+ */
+/**
+ * Resolve the canonical program_title for a row that may identify its
+ * program via title fields OR salesforce_program_id only.
+ */
+export const resolveProgramTitle = (
+  row: any,
+  programConfig: Array<{ program_title?: string | null; salesforce_program_id?: string | null }> = [],
+): string => {
+  const direct = row?.program_title || row?.coaching_program || row?.program_name || '';
+  if (direct && direct.trim()) return direct.trim();
+  const sfId = row?.salesforce_program_id;
+  if (sfId) {
+    const match = programConfig.find(p => p.salesforce_program_id === sfId);
+    if (match?.program_title) return match.program_title.trim();
+  }
+  return '';
+};
+
+export const createCohortMatcher = (
+  programConfig: Array<{ program_title?: string | null; salesforce_program_id?: string | null }> = [],
+  selectedCohort: string | null | undefined,
+  programTypeFilter?: string,
+) => {
+  const normalize = (s: string | null | undefined) => (s || '').toLowerCase().trim();
+  const sel = normalize(selectedCohort);
+  const isAll = !sel || sel === 'all cohorts' || sel === 'all programs';
+
+  let cohortIdentity: { title: string; sfId: string | null } | null = null;
+  if (!isAll) {
+    const match = programConfig.find(p => normalize(p.program_title) === sel);
+    cohortIdentity = {
+      title: match?.program_title || (selectedCohort as string),
+      sfId: match?.salesforce_program_id || null,
+    };
+  }
+
+  const matchesProgramType = (title: string) => {
+    if (!programTypeFilter) return true;
+    return (title || '').toUpperCase().includes(programTypeFilter.toUpperCase());
+  };
+
+  return (row: any): boolean => {
+    const rowTitle =
+      row?.program_title ?? row?.coaching_program ?? row?.cohort ?? row?.program ?? '';
+    if (isAll) return matchesProgramType(rowTitle);
+    if (!cohortIdentity) return false;
+    if (rowTitle && normalize(rowTitle) === normalize(cohortIdentity.title)) return true;
+    if (cohortIdentity.sfId && row?.salesforce_program_id === cohortIdentity.sfId) return true;
+    return false;
+  };
+};
 
 // ============================================
 // EMPLOYEE & SESSION QUERIES
