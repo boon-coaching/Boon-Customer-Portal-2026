@@ -723,10 +723,10 @@ const BaselineDashboard: React.FC<BaselineDashboardProps> = ({ programTypeFilter
             </div>
 
             {/* Main Content Grid */}
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 
                 {/* Left Column: Wellbeing & Competencies */}
-                <div className="xl:col-span-2 space-y-8">
+                <div className="lg:col-span-2 space-y-8">
                     
                     {/* Competency Chart (Now First) */}
                     {stats.competencies.length > 0 && (
@@ -831,9 +831,9 @@ const BaselineDashboard: React.FC<BaselineDashboardProps> = ({ programTypeFilter
                 </div>
 
                 {/* Right Column: Demographics */}
-                <div className="xl:col-span-1 space-y-6">
+                <div className="lg:col-span-1 space-y-6">
                     {/* Desktop View */}
-                    <div className="hidden xl:block space-y-6">
+                    <div className="hidden lg:block space-y-6">
                         <DemographicCard title="Age Distribution" data={stats.demographics.age} />
                         <DemographicCard title="Tenure" data={stats.demographics.tenure} />
                         <DemographicCard title="Years Experience" data={stats.demographics.experience} />
@@ -841,7 +841,7 @@ const BaselineDashboard: React.FC<BaselineDashboardProps> = ({ programTypeFilter
                     </div>
 
                     {/* Mobile/Tablet Accordion View */}
-                    <div className="xl:hidden bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                    <div className="lg:hidden bg-white rounded-2xl border border-gray-100 overflow-hidden">
                         <button 
                             onClick={() => setDemographicsOpen(!demographicsOpen)}
                             className="w-full p-6 flex justify-between items-center bg-gray-50 hover:bg-gray-100 transition"
@@ -915,7 +915,7 @@ const DemographicCard = ({ title, data }: { title: string, data: { label: string
     };
     
     return (
-        <div className="bg-white xl:p-6 rounded-2xl xl:shadow-sm xl:border border-gray-100">
+        <div className="bg-white lg:p-6 rounded-2xl lg:shadow-sm lg:border border-gray-100">
             <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                 <PieChart className="w-3 h-3" /> {title}
             </h4>

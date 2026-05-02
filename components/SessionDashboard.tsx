@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { isAdminUser } from '../constants';
-import { getDashboardSessions, getEmployeeRoster, getSurveyResponses, CompanyFilter, buildCompanyFilter } from '../lib/dataFetcher';
+import { getDashboardSessions, getEmployeeRoster, getSurveyResponses, getProgramConfig, CompanyFilter, buildCompanyFilter } from '../lib/dataFetcher';
 import { SessionWithEmployee, Employee, SurveyResponse } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { useAnalytics, AnalyticsEvents } from '../lib/useAnalytics';
@@ -60,6 +60,7 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [surveys, setSurveys] = useState<SurveyResponse[]>([]);
   const [welcomeSurveys, setWelcomeSurveys] = useState<any[]>([]);
+  const [programConfigs, setProgramConfigs] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -130,10 +131,11 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
         // Build company filter using helper
         const companyFilter = buildCompanyFilter(companyId, accName, company);
 
-        const [sessionsData, rosterData, surveyData] = await Promise.all([
+        const [sessionsData, rosterData, surveyData, configData] = await Promise.all([
           getDashboardSessions(companyFilter),
           getEmployeeRoster(companyFilter),
-          getSurveyResponses(companyFilter)
+          getSurveyResponses(companyFilter),
+          getProgramConfig(companyFilter)
         ]);
         
         // Fetch welcome survey data (baseline first, fall back to scale)
@@ -236,6 +238,7 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
           setEmployees(filteredEmployees || []);
           setSurveys(filteredSurveys || []);
           setWelcomeSurveys(welcomeSurveyData || []);
+          setProgramConfigs(configData || []);
           setError(null);
         }
       } catch (err: any) {
@@ -471,6 +474,30 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
     return null;
   };
 
+  // Normalize any program string against program_config so sessions / employees /
+  // welcome surveys all surface the canonical program_title rather than a mix of
+  // program_number ("CP-0022"), short variants ("Enviromatic Systems GROW"), and
+  // full titles in the same column.
+  const normalizeProgram = useMemo(() => {
+    const aliasToCanonical = new Map<string, string>();
+    programConfigs.forEach(p => {
+      const canonical = (p.program_title || '').trim();
+      if (!canonical) return;
+      const aliases = [
+        canonical,
+        (p.program_number || '').trim(),
+        canonical.replace(/\s+Program$/i, '').trim(),
+      ].filter(Boolean) as string[];
+      aliases.forEach(a => aliasToCanonical.set(a.toLowerCase(), canonical));
+    });
+    return (raw: string | null | undefined): string => {
+      if (!raw) return 'Unassigned';
+      const trimmed = raw.trim();
+      if (!trimmed) return 'Unassigned';
+      return aliasToCanonical.get(trimmed.toLowerCase()) || trimmed;
+    };
+  }, [programConfigs]);
+
   // --- Aggregation Logic ---
   const aggregatedStats = useMemo(() => {
     const statsMap = new Map<string, {
@@ -506,7 +533,7 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
       if (existingKey) {
         // Merge with existing - prefer the one with a program assigned
         const existing = statsMap.get(existingKey)!;
-        const newProgram = emp.coaching_program || emp.program_name || 'Unassigned';
+        const newProgram = normalizeProgram(emp.coaching_program || emp.program_name);
         if (existing.program === 'Unassigned' && newProgram !== 'Unassigned') {
           existing.program = newProgram;
           existing.cohort = emp.cohort || emp.program_name || existing.cohort;
@@ -525,8 +552,8 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
         statsMap.set(key, {
           id: emp.id,
           name: name,
-          program: emp.coaching_program || emp.program_name || 'Unassigned',
-          cohort: emp.cohort || emp.program_name || '', 
+          program: normalizeProgram(emp.coaching_program || emp.program_name),
+          cohort: emp.cohort || emp.program_name || '',
           avatar_url: emp.avatar_url,
           completed: 0,
           noshow: 0,
@@ -574,7 +601,7 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
         statsMap.set(key, {
           id: session.employee_id || session.id,
           name: name,
-          program: sessionProgram || 'Unassigned',
+          program: normalizeProgram(sessionProgram),
           cohort: sessionCohort,
           avatar_url: emp?.avatar_url,
           completed: 0,
@@ -591,7 +618,7 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
       const entry = statsMap.get(matchedKey)!;
       if (!entry.cohort && sessionCohort) entry.cohort = sessionCohort;
       // Always use session's program_title - it's the source of truth for session counts
-      if (sessionProgram) entry.program = sessionProgram;
+      if (sessionProgram) entry.program = normalizeProgram(sessionProgram);
       if (!entry.email && email) entry.email = email;
       entry.status = 'active';
       // Session data takes precedence for name (since it has sessions tied to it)
@@ -640,7 +667,7 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
           existing.status = 'pending_match';
           existing.welcomeSurveyDate = new Date(ws.created_at);
           if (existing.program === 'Unassigned' && ws.program_title) {
-            existing.program = ws.program_title;
+            existing.program = normalizeProgram(ws.program_title);
           }
         }
       } else {
@@ -649,7 +676,7 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
         statsMap.set(key, {
           id: `ws-${ws.id}`,
           name: name,
-          program: ws.program_title || 'Unassigned',
+          program: normalizeProgram(ws.program_title),
           cohort: '',
           completed: 0,
           noshow: 0,
@@ -664,7 +691,7 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
     });
 
     return Array.from(statsMap.values());
-  }, [sessions, employees, welcomeSurveys, filterType, filterValue, hiddenEmployees]);
+  }, [sessions, employees, welcomeSurveys, filterType, filterValue, hiddenEmployees, normalizeProgram]);
 
   // Get unique programs for filter dropdown
   const availablePrograms = useMemo(() => {

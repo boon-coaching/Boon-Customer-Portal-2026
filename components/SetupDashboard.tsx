@@ -549,6 +549,27 @@ const SetupDashboard: React.FC = () => {
     );
   }
 
+  // Already-launched state. Avoids showing a stale launch checklist + year-old
+  // "Today!" launch date for clients past onboarding (admins can still navigate
+  // here; they just don't see the misleading checklist).
+  const hasOnboardingProgram = programs.some(p => (p.status || '').toLowerCase() === 'onboarding');
+  if (!loading && !hasOnboardingProgram) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="w-16 h-16 bg-boon-green/10 rounded-full flex items-center justify-center mb-4">
+          <CheckCircle2 size={32} className="text-boon-green" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Program is live</h2>
+        <p className="text-gray-500 max-w-md mb-6">
+          Setup is complete. Head to Dashboard, Sessions, or Impact to see how the program is running.
+        </p>
+        <Button onClick={() => { window.location.href = '/'; }}>
+          Go to Dashboard
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-12">
       {/* Success Toast */}
@@ -569,7 +590,7 @@ const SetupDashboard: React.FC = () => {
               <CheckCircle2 size={28} />
             </div>
             <div>
-              <h2 className="text-xl font-bold">All Set! You're Ready to Launch 🎉</h2>
+              <h2 className="text-xl font-bold">All Set! You're Ready to Launch</h2>
               <p className="text-white/90 mt-1">Great job completing all setup tasks. Your Boon team will be in touch to confirm your launch date.</p>
             </div>
           </div>
@@ -577,7 +598,7 @@ const SetupDashboard: React.FC = () => {
       )}
 
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome to Boon! 🎉</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome to Boon</h1>
         <p className="text-gray-600">Let's get your coaching program ready to launch. Complete the tasks below and we'll be ready to go.</p>
       </div>
 
