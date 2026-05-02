@@ -682,7 +682,11 @@ const MainPortalLayout: React.FC = () => {
               </button>
             </div>
           )}
-          {isAdmin && isManager && (
+          {/* Hide the Manager View toggle while admin-impersonating: the manager
+              relationship is keyed off the real auth user, so the toggle would
+              show the admin's own reports rather than anything from the
+              impersonated company, which is confusing. */}
+          {isAdmin && isManager && !localStorage.getItem(ADMIN_COMPANY_KEY) && (
             <button
               onClick={() => setViewMode(viewMode === 'admin' ? 'manager' : 'admin')}
               className="mt-2 flex items-center gap-2 px-3 py-2 bg-purple-100 text-purple-800 rounded-lg text-xs font-bold hover:bg-purple-200 transition w-full justify-center"
