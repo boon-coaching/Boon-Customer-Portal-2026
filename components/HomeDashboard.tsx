@@ -352,36 +352,42 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({ programTypeFilter }) => {
       return programTitle?.toUpperCase().includes(programTypeFilter);
     };
 
-    // 1. Filter sessions to the selected cohort - use ONLY program_title for accurate filtering
-    // When "All Cohorts" and programTypeFilter is set, filter to only matching program type
-    const cohortSessions = sessions.filter(s => {
-        const pTitle = (s as any).program_title || '';
-        if (isAll) {
-          return matchesProgramFilter(pTitle);
-        }
-        return normalize(pTitle) === selNorm;
-    });
+    // Resolve the selected cohort to its canonical identity from program_config.
+    // Employee/session/welcome rows belong to a cohort if they match EITHER the
+    // canonical program_title OR the salesforce_program_id - some Salesforce
+    // sync paths only populate one or the other, so checking both prevents the
+    // employee count from under-reporting (was showing 2 of 5 GROW employees).
+    const cohortIdentity = (() => {
+      if (isAll) return null;
+      const match = programConfig.find(p =>
+        normalize((p as any).program_title || '') === selNorm
+      );
+      return {
+        title: ((match as any)?.program_title as string) || selectedCohort,
+        sfId: ((match as any)?.salesforce_program_id as string) || null,
+      };
+    })();
 
-    // 2. Get total employees from roster - use program_title or coaching_program
-    const enrolledEmployees = employees.filter(e => {
-        const pt = (e as any).program_title || (e as any).coaching_program || '';
-        if (isAll) {
-          return matchesProgramFilter(pt);
-        }
-        return normalize(pt) === selNorm;
-    });
+    const matchesCohort = (row: any): boolean => {
+      const pt = row?.program_title || row?.coaching_program || '';
+      if (isAll) return matchesProgramFilter(pt);
+      if (!cohortIdentity) return false;
+      if (pt && normalize(pt) === normalize(cohortIdentity.title)) return true;
+      if (cohortIdentity.sfId && row?.salesforce_program_id === cohortIdentity.sfId) return true;
+      return false;
+    };
+
+    // 1. Filter sessions to the selected cohort
+    const cohortSessions = sessions.filter(s => matchesCohort(s));
+
+    // 2. Get total employees from roster
+    const enrolledEmployees = employees.filter(e => matchesCohort(e));
 
     // Total employees from roster (this is the denominator for utilization)
     const totalEmployeesCount = enrolledEmployees.length;
 
-    // 3. Filter welcome surveys for this cohort
-    const cohortWelcomeSurveys = welcomeSurveys.filter(ws => {
-        const wsPt = ws.program_title || '';
-        if (isAll) {
-          return matchesProgramFilter(wsPt);
-        }
-        return normalize(wsPt) === selNorm;
-    });
+    // 3. Filter welcome surveys for this cohort (same matcher: title or sf id)
+    const cohortWelcomeSurveys = welcomeSurveys.filter(ws => matchesCohort(ws));
 
     // --- Metrics Calculation ---
 
