@@ -39,8 +39,23 @@ const programDisplayNames: Record<string, string> = {
   'CP-0117': 'GROW - Cohort 2',
 };
 
+// Short labels keep table pills readable. Full canonical name like
+// "Enviromatic System EXEC Program" overflows the 180px badge as
+// "ENVIROMATIC SYSTEM..."; the company is already implicit in the
+// page context, so just surface the program type.
+const PROGRAM_TYPES = ['GROW', 'EXEC', 'SCALE', 'TOGETHER', 'ADAPT'] as const;
+
 const getDisplayName = (program: string): string => {
-  return programDisplayNames[program] || program;
+  if (!program) return program;
+  if (programDisplayNames[program]) return programDisplayNames[program];
+
+  const upper = program.toUpperCase();
+  for (const type of PROGRAM_TYPES) {
+    if (upper.includes(type)) {
+      return type.charAt(0) + type.slice(1).toLowerCase();
+    }
+  }
+  return program;
 };
 
 // --- Helper to check if session is canceled (should be excluded) ---
