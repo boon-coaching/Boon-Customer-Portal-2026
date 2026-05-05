@@ -11,11 +11,11 @@
   "dependencies": {
     "react": "18.2.0",
     "react-dom": "18.2.0",
-    "@supabase/supabase-js": "2.39.7",
+    "@supabase/supabase-js": "2.105.3",
     "lucide-react": "0.344.0",
     "react-router-dom": "6.22.3",
-    "@remix-run/router": "1.15.3",
-    "@sentry/react": "^10.32.1",
+    "@remix-run/router": "1.23.2",
+    "@sentry/react": "^10.51.0",
     "jspdf": "^4.2.1"
   },
   "devDependencies": {
