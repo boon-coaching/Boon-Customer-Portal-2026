@@ -1,5 +1,5 @@
 import * as Sentry from "@sentry/react";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import { supabase } from './lib/supabaseClient';
 import { isAdminUser } from './constants';
@@ -15,7 +15,7 @@ import ThemesDashboard from './components/ThemesDashboard';
 import BaselineDashboard from './components/BaselineDashboard';
 import ScaleBaselineDashboard from './components/ScaleBaselineDashboard';
 import ScaleDashboard from './components/ScaleDashboard';
-import ReportGenerator from './components/ReportGenerator';
+const ReportGenerator = lazy(() => import('./components/ReportGenerator'));
 import SetupDashboard from './components/SetupDashboard';
 import ManagerDashboard from './components/ManagerDashboard';
 
@@ -797,11 +797,13 @@ const MainPortalLayout: React.FC = () => {
 
           <div className="pt-4 mt-4 border-t border-gray-100 space-y-2">
             <div className="px-4 py-2">
-              <ReportGenerator 
-                companyName={companyName}
-                clientLogo={clientLogo}
-                programType={programType}
-              />
+              <Suspense fallback={null}>
+                <ReportGenerator
+                  companyName={companyName}
+                  clientLogo={clientLogo}
+                  programType={programType}
+                />
+              </Suspense>
             </div>
             <NavItem icon={<Settings size={20} />} label="Settings" />
           </div>
