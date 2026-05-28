@@ -549,6 +549,7 @@ const MainPortalLayout: React.FC = () => {
   // Notify internal Slack channel on login (fires only on actual sign-in, not page refreshes)
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('[notify-login] event:', event, 'isAdmin:', isAdminUser(session));
       if (event !== 'SIGNED_IN' || !session) return;
 
       const user = session.user;
