@@ -486,18 +486,7 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({ programTypeFilter }) => {
       }
     }
 
-    // When "All Cohorts" spans multiple programs with different session counts,
-    // sum per-employee targets instead of using a single multiplier.
-    let targetSessions: number;
-    if (isAll && programConfig.length > 1) {
-      targetSessions = enrolledEmployees.reduce((total, employee) => {
-        const empProgram = normalize((employee as any).program_title || (employee as any).coaching_program || '');
-        const empConfig = programConfig.find(p => normalize(p.program_title || '') === empProgram);
-        return total + (empConfig?.sessions_per_employee || sessionsPerEmployee);
-      }, 0);
-    } else {
-      targetSessions = totalEmployeesCount * sessionsPerEmployee;
-    }
+    const targetSessions = totalEmployeesCount * sessionsPerEmployee;
     const progressPct = targetSessions > 0 ? Math.min(100, Math.round((sessionsUsedCount / targetSessions) * 100)) : 0;
 
     // Calculate growth from competency scores (only using rows with BOTH pre AND post)
@@ -851,7 +840,6 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({ programTypeFilter }) => {
         topSessionSubThemes,
         selectedCohortName: getCohortDisplayName(selectedCohort),
         sessionsPerEmployee,
-        mixedSessionCounts: isAll && programConfig.length > 1 && new Set(programConfig.map(p => p.sessions_per_employee)).size > 1,
         programStartDate,
         programEndDate
     };
@@ -964,7 +952,7 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({ programTypeFilter }) => {
             </div>
             <p className="text-xl md:text-2xl text-gray-600 font-medium">through the program</p>
             <p className="text-sm text-gray-400 mt-6 font-medium">
-                {stats.sessionsUsedCount} of {stats.targetSessions} expected sessions used ({stats.totalEmployeesCount} employees{stats.mixedSessionCounts ? ' across programs' : ` × ${stats.sessionsPerEmployee} sessions`})
+                {stats.sessionsUsedCount} of {stats.targetSessions} billable sessions delivered ({stats.totalEmployeesCount} employees × {stats.sessionsPerEmployee} sessions)
             </p>
         </HoverCard>
       )}
