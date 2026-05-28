@@ -546,6 +546,38 @@ const MainPortalLayout: React.FC = () => {
     fetchMetadata();
   }, []);
 
+  // Notify internal Slack channel on login (fires only on actual sign-in, not page refreshes)
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event !== 'SIGNED_IN' || !session) return;
+
+      const user = session.user;
+      const isAdmin = isAdminUser(session);
+      if (isAdmin) return; // Don't notify for internal admin logins
+
+      const companyId = user.app_metadata?.company_id;
+      const companyName = (user.app_metadata?.company || '').split(' - ')[0];
+      const userEmail = user.email;
+
+      if (!companyId) return;
+
+      try {
+        await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notify-login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ company_id: companyId, company_name: companyName, user_email: userEmail }),
+        });
+      } catch {
+        // Non-critical, never surface to user
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   const handleSignOut = async () => {
     Sentry.setUser(null); // Clear user context on sign out
     await supabase.auth.signOut();
