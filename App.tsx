@@ -559,6 +559,7 @@ const MainPortalLayout: React.FC = () => {
       const companyName = (user.app_metadata?.company || '').split(' - ')[0];
       const userEmail = user.email;
 
+      console.log('[notify-login] app_metadata:', JSON.stringify(user.app_metadata));
       if (!companyId && !companyName) return;
 
       try {
