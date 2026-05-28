@@ -865,7 +865,7 @@ const SessionDashboard: React.FC<SessionDashboardProps> = ({ filterType, filterV
              const idMatch = s.employee_id && selectedStat.id && String(s.employee_id) === String(selectedStat.id) && !String(selectedStat.id).startsWith('gen-');
              
              let matchesFilter = true;
-             const sessionProgram = s.program_name || s.program || '';
+             const sessionProgram = (s as any).program_title || s.program_name || s.program || '';
              const sessionCohort = s.cohort || s.program_name || '';
 
              if (filterType === 'program') matchesFilter = sessionProgram === filterValue;
