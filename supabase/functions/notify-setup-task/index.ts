@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const SLACK_BOT_TOKEN = Deno.env.get("SLACK_BOT_TOKEN_SETUP_NOTIFICATIONS");
+const SLACK_BOT_TOKEN = Deno.env.get("SLACK_CUSTOMER_PORTAL_NOTIFICATIONS");
 const allowedOrigin = Deno.env.get("ALLOWED_ORIGIN") ?? "https://portal.boon-health.com";
 
 const corsHeaders = {
@@ -46,7 +46,6 @@ serve(async (req) => {
       );
     }
 
-    // Verify the user belongs to this company (admins can act on any)
     const userCompanyId = user.app_metadata?.company_id;
     const isAdmin = user.app_metadata?.role === "admin";
     if (userCompanyId && userCompanyId !== company_id && !isAdmin) {
@@ -63,7 +62,6 @@ serve(async (req) => {
       );
     }
 
-    // Look up the Slack channel for this company
     const { data: configRows } = await supabase
       .from("program_config")
       .select("slack_channel_id")
@@ -73,7 +71,6 @@ serve(async (req) => {
 
     const channelId = configRows?.[0]?.slack_channel_id;
     if (!channelId) {
-      // No channel configured — silently succeed
       return new Response(
         JSON.stringify({ ok: true, skipped: true }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
