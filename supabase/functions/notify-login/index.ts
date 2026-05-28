@@ -39,7 +39,7 @@ serve(async (req) => {
 
     const { company_id, company_name, user_email } = await req.json();
 
-    if (!company_id) {
+    if (!company_id && !company_name) {
       return new Response(
         JSON.stringify({ ok: true, skipped: true }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -53,14 +53,28 @@ serve(async (req) => {
       );
     }
 
-    const { data: configRows } = await supabase
-      .from("program_config")
-      .select("slack_channel_id")
-      .eq("company_id", company_id)
-      .not("slack_channel_id", "is", null)
-      .limit(1);
+    // Resolve account name: use company_id -> program_config if available, else use company_name directly
+    let accountName: string | null = null;
+    if (company_id) {
+      const { data: configRow } = await supabase
+        .from("program_config")
+        .select("account_name")
+        .eq("company_id", company_id)
+        .limit(1)
+        .single();
+      accountName = configRow?.account_name ?? null;
+    }
+    if (!accountName && company_name) {
+      accountName = company_name;
+    }
 
-    const channelId = configRows?.[0]?.slack_channel_id;
+    const { data: companyRow } = accountName ? await supabase
+      .from("companies")
+      .select("slack_channel_id")
+      .eq("name", accountName)
+      .single() : { data: null };
+
+    const channelId = companyRow?.slack_channel_id;
     if (!channelId) {
       return new Response(
         JSON.stringify({ ok: true, skipped: true }),

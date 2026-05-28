@@ -559,7 +559,7 @@ const MainPortalLayout: React.FC = () => {
       const companyName = (user.app_metadata?.company || '').split(' - ')[0];
       const userEmail = user.email;
 
-      if (!companyId) return;
+      if (!companyId && !companyName) return;
 
       try {
         await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notify-login`, {
