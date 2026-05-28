@@ -58,6 +58,7 @@ const LoginPage: React.FC = () => {
       const isAdmin = user?.app_metadata?.role === 'admin' || user?.email?.endsWith('@boon-health.com');
       const companyId = user?.app_metadata?.company_id;
       const companyName = (user?.app_metadata?.company || '').split(' - ')[0];
+      console.log('[notify] isAdmin:', isAdmin, 'companyId:', companyId, 'companyName:', companyName);
       if (!isAdmin && (companyId || companyName)) {
         fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notify-login`, {
           method: 'POST',
