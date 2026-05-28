@@ -187,6 +187,19 @@ const SetupDashboard: React.FC = () => {
     setTimeout(() => setSaveSuccess(null), 2000);
   };
 
+  const hasGrowOrExec = programs.some(p => p.type === 'EXEC' || p.type === 'GROW');
+
+  const filteredCategories = useMemo(() => {
+    if (hasGrowOrExec) return TASK_CATEGORIES;
+    return TASK_CATEGORIES.map(category => {
+      if (category.id !== 'program_config') return category;
+      return {
+        ...category,
+        tasks: category.tasks.filter(t => t.id !== 'select_focus_areas'),
+      };
+    });
+  }, [hasGrowOrExec]);
+
   // Send a Slack notification to the company's internal channel
   const notifyTaskComplete = useCallback(async (taskId: string, taskLabel: string, updatedCompletions?: Record<string, boolean>) => {
     try {
@@ -221,19 +234,6 @@ const SetupDashboard: React.FC = () => {
       console.error('Failed to send task notification:', err);
     }
   }, [companyId, companyName, filteredCategories, taskCompletions]);
-
-  const hasGrowOrExec = programs.some(p => p.type === 'EXEC' || p.type === 'GROW');
-
-  const filteredCategories = useMemo(() => {
-    if (hasGrowOrExec) return TASK_CATEGORIES;
-    return TASK_CATEGORIES.map(category => {
-      if (category.id !== 'program_config') return category;
-      return {
-        ...category,
-        tasks: category.tasks.filter(t => t.id !== 'select_focus_areas'),
-      };
-    });
-  }, [hasGrowOrExec]);
 
   // Auto-expand next incomplete category
   const expandNextIncompleteCategory = (currentCategoryId: string) => {
