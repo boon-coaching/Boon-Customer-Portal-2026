@@ -203,18 +203,14 @@ const SetupDashboard: React.FC = () => {
   // Send a Slack notification to the company's internal channel
   const notifyTaskComplete = useCallback(async (taskId: string, taskLabel: string, updatedCompletions?: Record<string, boolean>) => {
     try {
-      console.log('[notify] called for task:', taskId);
       const { data: { session } } = await supabase.auth.getSession();
-      console.log('[notify] session:', session?.access_token ? 'ok' : 'missing');
       if (!session?.access_token) return;
 
       const allTasks = filteredCategories.flatMap(c => c.tasks);
       const currentCompletions = updatedCompletions ?? taskCompletions;
       const completedCount = allTasks.filter(t => currentCompletions[t.id] || t.id === taskId).length;
 
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notify-setup-task`;
-      console.log('[notify] fetching:', url, 'company_id:', companyId);
-      await fetch(url, {
+      await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notify-setup-task`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
