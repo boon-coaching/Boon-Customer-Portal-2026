@@ -41,7 +41,7 @@ const LoginPage: React.FC = () => {
     setError(null);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -52,6 +52,19 @@ const LoginPage: React.FC = () => {
 
       // Track successful login
       trackEvent(AnalyticsEvents.LOGIN, { method: 'password' });
+
+      // Notify internal Slack channel (fire-and-forget)
+      const user = data.user;
+      const isAdmin = user?.app_metadata?.role === 'admin' || user?.email?.endsWith('@boon-health.com');
+      const companyId = user?.app_metadata?.company_id;
+      const companyName = (user?.app_metadata?.company || '').split(' - ')[0];
+      if (!isAdmin && (companyId || companyName)) {
+        fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notify-login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${data.session?.access_token}` },
+          body: JSON.stringify({ company_id: companyId, company_name: companyName, user_email: user?.email }),
+        }).catch(() => {});
+      }
 
       navigate('/');
     } catch (err: any) {
