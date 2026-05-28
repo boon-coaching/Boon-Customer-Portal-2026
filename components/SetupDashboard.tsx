@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { isAdminUser } from '../constants';
 import { supabase } from '../lib/supabaseClient';
 import { ChevronRight, Calendar, Upload, Download, ExternalLink, CheckCircle2, Clock, Users, MessageSquare, FileText, Shield, CreditCard, Rocket, X, Copy, Mail, Check, Eye, Info } from 'lucide-react';
@@ -186,6 +186,37 @@ const SetupDashboard: React.FC = () => {
     setSaveSuccess(message);
     setTimeout(() => setSaveSuccess(null), 2000);
   };
+
+  // Send a Slack notification to the company's internal channel
+  const notifyTaskComplete = useCallback(async (taskId: string, taskLabel: string, updatedCompletions?: Record<string, boolean>) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
+      const allTasks = filteredCategories.flatMap(c => c.tasks);
+      const currentCompletions = updatedCompletions ?? taskCompletions;
+      const completedCount = allTasks.filter(t => currentCompletions[t.id] || t.id === taskId).length;
+
+      await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notify-setup-task`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          company_id: companyId,
+          company_name: companyName.split(' - ')[0],
+          task_id: taskId,
+          task_label: taskLabel,
+          completed_count: completedCount,
+          total_count: allTasks.length,
+        }),
+      });
+    } catch (err) {
+      // Non-critical — don't surface errors to the user
+      console.error('Failed to send task notification:', err);
+    }
+  }, [companyId, companyName, filteredCategories, taskCompletions]);
 
   const hasGrowOrExec = programs.some(p => p.type === 'EXEC' || p.type === 'GROW');
 
@@ -384,6 +415,11 @@ const SetupDashboard: React.FC = () => {
       }
 
       setTaskCompletions(prev => ({ ...prev, [taskId]: true }));
+
+      // Notify internal Slack channel
+      const taskDef = filteredCategories.flatMap(c => c.tasks).find(t => t.id === taskId);
+      if (taskDef) notifyTaskComplete(taskId, taskDef.label, { ...taskCompletions, [taskId]: true });
+
       showSuccessToast('Saved successfully');
       return true;
     } catch (err) {
@@ -418,6 +454,10 @@ const SetupDashboard: React.FC = () => {
         alert(`Failed to save: ${error.message || 'Unknown error'}. Please contact support if this persists.`);
         setTaskCompletions(prev => ({ ...prev, [taskId]: !newValue }));
       } else if (newValue) {
+        // Notify internal Slack channel
+        const taskDef = filteredCategories.flatMap(c => c.tasks).find(t => t.id === taskId);
+        if (taskDef) notifyTaskComplete(taskId, taskDef.label, { ...taskCompletions, [taskId]: true });
+
         // Check if current category is now complete and auto-expand next
         const currentCategory = filteredCategories.find(c => c.tasks.some(t => t.id === taskId));
         if (currentCategory) {
@@ -927,6 +967,7 @@ const SetupDashboard: React.FC = () => {
                         console.error('Failed to mark task complete:', taskError);
                       }
                       setTaskCompletions(prev => ({ ...prev, select_focus_areas: true }));
+                      notifyTaskComplete('select_focus_areas', 'Select focus areas for program', { ...taskCompletions, select_focus_areas: true });
                       showSuccessToast('Focus areas saved');
                     } catch (err) {
                       console.error('Failed to save competencies:', err);
@@ -1164,6 +1205,7 @@ const SetupDashboard: React.FC = () => {
                   console.error('Failed to mark task complete:', taskError);
                 }
                 setTaskCompletions(prev => ({ ...prev, schedule_launch: true }));
+                notifyTaskComplete('schedule_launch', 'Schedule launch date', { ...taskCompletions, schedule_launch: true });
                 showSuccessToast('Launch date saved');
               } catch (err) {
                 console.error('Failed to update launch date:', err);
@@ -1403,6 +1445,7 @@ const SetupDashboard: React.FC = () => {
                   console.error('Failed to mark task complete:', taskError);
                 }
                 setTaskCompletions(prev => ({ ...prev, company_context: true }));
+                notifyTaskComplete('company_context', 'Provide company context for coaches', { ...taskCompletions, company_context: true });
                 showSuccessToast('Company context saved');
                 setShowContextModal(false);
               } catch (err) {
@@ -1433,6 +1476,7 @@ const SetupDashboard: React.FC = () => {
                 completed_at: new Date().toISOString(),
               }, { onConflict: 'company_id,task_id' });
             setTaskCompletions(prev => ({ ...prev, send_announcement: true }));
+            notifyTaskComplete('send_announcement', 'Send announcement to your team', { ...taskCompletions, send_announcement: true });
           }
         };
         return (
@@ -1602,8 +1646,9 @@ const SetupDashboard: React.FC = () => {
                         completed_at: new Date().toISOString(),
                       }, { onConflict: 'company_id,task_id' });
                     setTaskCompletions(prev => ({ ...prev, share_allowlist: true }));
+                    notifyTaskComplete('share_allowlist', 'Share Allow List with IT department', { ...taskCompletions, share_allowlist: true });
                   }
-                  
+
                   setTimeout(() => setCopied(false), 2000);
                 }}
                 icon={copied ? <Check size={16} /> : <Copy size={16} />}
